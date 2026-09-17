@@ -21,8 +21,8 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 <div class="top"><div><div class="tag">FLIGHT-TEST BUILD</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
-<div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults"></div>
-<div><label>DESTINATION</label><input id="dest" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('dest')"></div><div id="destResults" class="searchResults"></div>
+<div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
+<div><label>DESTINATION</label><input id="dest" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('dest')"></div><div id="destResults" class="searchResults full"></div>
 <div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" autocomplete="off" autocapitalize="characters" oninput="showFixResults()"></div><div id="fixResults" class="searchResults full"></div>
 <div><label>CRUISE ALTITUDE</label><input id="alt" value="" inputmode="numeric"></div>
 <div><label>&nbsp;</label><button onclick="buildRoute()">Get ATC Guidance</button></div>
@@ -122,8 +122,8 @@ function buildRoute(){
     {key:"ILM|118.25",call:"WILMINGTON",facility:"ILM",freq:118.25,at:interpolate(pts[1],pts[2],.72)}
    ];
  }
- let d=$("dest").value.trim().toUpperCase().replace(/^K(?=[A-Z]{3}$)/,"");
- if(ATC_DATA.ctaf[d])seq.push({key:d+"|CTAF",call:d+" CTAF",facility:d,freq:ATC_DATA.ctaf[d],at:pts.at(-1)});
+ let destLocal=$("dest").value.trim().toUpperCase().replace(/^K(?=[A-Z]{3}$)/,"");
+ if(ATC_DATA.ctaf[destLocal])seq.push({key:destLocal+"|CTAF",call:destLocal+" CTAF",facility:destLocal,freq:ATC_DATA.ctaf[destLocal],at:pts.at(-1)});
  if(!seq.length){alert("No likely ATC sequence was found for this route. Try the route without optional waypoints, or log the actual handoffs so we can improve this case.");return}
  idx=0;logs=[];$("flight").classList.remove("hidden");render()
 }
