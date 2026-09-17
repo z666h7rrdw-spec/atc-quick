@@ -12,32 +12,31 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 .call{font-size:21px;font-weight:800}.muted{color:#91a7bd}.next{border:2px solid #318ce7}.pill{display:inline-block;background:#17324d;border-radius:99px;padding:5px 9px;font-size:12px}
 .step{padding:12px 0;border-bottom:1px solid #203247}.step:last-child{border:0}.warn{font-size:12px;color:#f0c36b;line-height:1.35}
 .good{color:#75d69c}.gps{font-size:12px;color:#9bb0c5}.hidden{display:none}
+.searchResults{display:none;position:relative;z-index:5;background:#081421;border:1px solid #34506c;border-radius:11px;margin-top:-5px;max-height:230px;overflow:auto}
+.searchResults.show{display:block}
+.searchItem{padding:11px;border-bottom:1px solid #203247;cursor:pointer}
+.searchItem:last-child{border-bottom:0}
+.searchItem b{display:block}.searchItem span{font-size:12px;color:#91a7bd}
 </style></head><body><main>
 <div class="top"><div><div class="tag">FLIGHT-TEST BUILD</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
-<div><label>ORIGIN</label><input id="origin" value="" autocapitalize="characters" list="airportList" oninput="airportSuggest(this)"></div>
-<div><label>DESTINATION</label><input id="dest" value="" autocapitalize="characters" list="airportList" oninput="airportSuggest(this)"></div>
-<div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" autocapitalize="characters" list="fixList" oninput="fixSuggest(this)"></div>
+<div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div>
+<div><label>DESTINATION</label><input id="dest" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('dest')"></div><div id="destResults" class="searchResults"></div>
+<div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" autocomplete="off" autocapitalize="characters" oninput="showFixResults()"></div><div id="fixResults" class="searchResults full"></div>
 <div><label>CRUISE ALTITUDE</label><input id="alt" value="" inputmode="numeric"></div>
 <div><label>&nbsp;</label><button onclick="buildRoute()">Start Flight</button></div>
-<div class="full"><button class="secondary" type="button" onclick="addWaypoint()">+ Add waypoint</button></div>
-<div class="full"><div class="tag" style="margin:8px 0 5px">RECENT ROUTES</div><div id="recents" class="muted">No recent routes yet.</div></div>
-</div>
-<datalist id="airportList"></datalist><datalist id="fixList"></datalist>
-</div>
+</div></div>
 
 <div id="flight" class="hidden">
 <div class="card next"><div class="tag">LIKELY NEXT</div><div id="nextCall" class="call">—</div><div id="nextFreq" class="big">—</div>
-<div id="afterNext" class="muted" style="margin-top:8px">After: —</div>
 <div id="gps" class="gps">GPS not started</div></div>
 <div class="row">
-<button class="secondary" onclick="prev()">← Previous</button><button onclick="handoff()">ATC HANDED ME OFF →</button>
+<button class="secondary" onclick="prev()">← Previous</button><button onclick="handoff()">ATC handed me off →</button>
 </div>
 <div class="card"><div class="tag">PREDICTED SEQUENCE</div><div id="sequence"></div></div>
-<div class="card"><div id="gpsCtl" class="gps">GPS starts with flight.</div>
+<div class="card"><button class="secondary" onclick="startGPS()">Use GPS to follow route</button>
 <div class="warn" style="margin-top:10px">Predictions are planning/awareness aids only. Frequencies and sector assignments can change. Use the frequency actually assigned by ATC.</div></div>
-<div class="row" style="margin-top:14px"><button class="secondary" onclick="reverseRoute()">Reverse Route</button><button class="secondary" onclick="endFlight()">End Flight</button></div>
 <div class="card"><div class="tag">FLIGHT TEST LOG</div><div id="log" class="muted">No handoffs logged yet.</div>
 <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button></div>
 </div>
@@ -57,71 +56,58 @@ function nearestService(p,track){
  return best
 }
 
-function normAirportInput(v){
- v=v.trim();
- let m=v.match(/^([A-Z0-9]{3,4})\s+[—-]\s+/i);
- let q=(m?m[1]:v).toUpperCase();
- if(ATC_DATA.airports[q]) return q;
- // Common 3-letter airport entry: prefer K+identifier when present.
- if(q.length===3 && ATC_DATA.airports["K"+q]) return "K"+q;
- let hits=[];
+function airportMatches(q){
+ q=q.trim().toUpperCase();
+ if(q.length<2)return [];
+ let seen=new Set(), out=[];
  for(const [id,a] of Object.entries(ATC_DATA.airports)){
-   let n=String(a[2]||"").toUpperCase();
-   if(n===q || n.startsWith(q+" ") || n.includes(q)) hits.push([id,n]);
- }
- if(!hits.length) return q;
- hits.sort((a,b)=>{
-   let ae=a[1]===q?0:a[1].startsWith(q)?1:2, be=b[1]===q?0:b[1].startsWith(q)?1:2;
-   if(ae!==be)return ae-be;
-   let ak=a[0].startsWith("K")?0:1,bk=b[0].startsWith("K")?0:1;
-   return ak-bk || a[1].length-b[1].length;
- });
- return hits[0][0]
-}
-function airportSuggest(el){
- let q=el.value.trim().toUpperCase(), dl=$("airportList"); dl.innerHTML="";
- if(q.length<2)return;
- let arr=[];
- for(const [id,a] of Object.entries(ATC_DATA.airports)){
-   if(id.length<3)continue;
    let name=String(a[2]||"").toUpperCase();
-   if(id.startsWith(q)||name.includes(q)) arr.push([id,a[2]]);
-   if(arr.length>=12)break;
+   let local=id.startsWith("K")&&id.length===4?id.slice(1):id;
+   let score=99;
+   if(id===q||local===q)score=0;
+   else if(id.startsWith(q)||local.startsWith(q))score=1;
+   else if(name.startsWith(q))score=2;
+   else if(name.includes(q))score=3;
+   else continue;
+   // Prefer ICAO aliases when available and avoid duplicate local/ICAO entries.
+   let canon=(id.length===3 && ATC_DATA.airports["K"+id])?"K"+id:id;
+   if(seen.has(canon))continue;
+   seen.add(canon);out.push({id:canon,name:a[2],score});
  }
- dl.innerHTML=arr.map(x=>`<option value="${x[0]} — ${x[1]}"></option>`).join("")
+ return out.sort((a,b)=>a.score-b.score||a.name.length-b.name.length).slice(0,8)
 }
-function fixSuggest(el){
- let q=el.value.trim().toUpperCase().split(/[ ,]+/).pop(), dl=$("fixList"); dl.innerHTML="";
- if(q.length<2)return;
- let arr=[];
- for(const id of Object.keys(ATC_DATA.fixes)){if(id.startsWith(q)){arr.push(id);if(arr.length>=12)break}}
- dl.innerHTML=arr.map(x=>`<option value="${x}"></option>`).join("")
+function showAirportResults(which){
+ let input=$(which), box=$(which+"Results"), hits=airportMatches(input.value);
+ if(!hits.length){box.classList.remove("show");box.innerHTML="";return}
+ box.innerHTML=hits.map(x=>`<div class="searchItem" onclick="pickAirport('${which}','${x.id}')"><b>${x.id} — ${x.name}</b><span>Tap to select</span></div>`).join("");
+ box.classList.add("show")
 }
-function addWaypoint(){
- let v=prompt("Enter FAA waypoint/fix identifier:");
- if(v){let e=$("wps");e.value=(e.value+" "+v.toUpperCase()).trim()}
+function pickAirport(which,id){
+ $(which).value=id;$(which+"Results").classList.remove("show")
 }
-function saveRecent(ids,alt){
- let rs=JSON.parse(localStorage.getItem("atcRecentRoutes")||"[]");
- let r={o:ids[0],d:ids.at(-1),w:ids.slice(1,-1).join(" "),a:alt};
- rs=rs.filter(x=>JSON.stringify(x)!==JSON.stringify(r));rs.unshift(r);rs=rs.slice(0,5);
- localStorage.setItem("atcRecentRoutes",JSON.stringify(rs));renderRecents()
+function showFixResults(){
+ let el=$("wps"),box=$("fixResults"),parts=el.value.toUpperCase().split(/[ ,]+/),q=parts.pop()||"";
+ if(q.length<2){box.classList.remove("show");return}
+ let hits=[];for(const id of Object.keys(ATC_DATA.fixes)){if(id.startsWith(q)){hits.push(id);if(hits.length>=8)break}}
+ if(!hits.length){box.classList.remove("show");return}
+ box.innerHTML=hits.map(id=>`<div class="searchItem" onclick="pickFix('${id}')"><b>${id}</b><span>FAA waypoint/fix</span></div>`).join("");
+ box.classList.add("show")
 }
-function renderRecents(){
- let rs=JSON.parse(localStorage.getItem("atcRecentRoutes")||"[]"), e=$("recents");
- if(!rs.length){e.textContent="No recent routes yet.";return}
- e.innerHTML=rs.map((r,i)=>`<button class="secondary" style="margin:4px 0;text-align:left" onclick="loadRecent(${i})">${r.o}${r.w?" → "+r.w.replace(/ /g," → "):""} → ${r.d} · ${r.a} ft</button>`).join("")
+function pickFix(id){
+ let el=$("wps"),parts=el.value.toUpperCase().split(/[ ,]+/);parts.pop();parts.push(id);el.value=parts.filter(Boolean).join(" ")+" ";$("fixResults").classList.remove("show")
 }
-function loadRecent(i){
- let r=JSON.parse(localStorage.getItem("atcRecentRoutes")||"[]")[i];
- $("origin").value=r.o;$("dest").value=r.d;$("wps").value=r.w;$("alt").value=r.a
+function resolveAirportText(v){
+ let q=v.trim().toUpperCase();
+ if(ATC_DATA.airports[q])return q;
+ if(q.length===3&&ATC_DATA.airports["K"+q])return "K"+q;
+ let h=airportMatches(q);return h.length?h[0].id:q
 }
 
 function buildRoute(){
- let o=normAirportInput($("origin").value), d=normAirportInput($("dest").value);
- let alt=$("alt").value.trim();
- if(!o||!d||!alt){alert("Enter an origin, destination, and cruise altitude.");return}
- let ids=[o,...$("wps").value.toUpperCase().split(/[ ,]+/).filter(Boolean),d];
+ let o=resolveAirportText($("origin").value), d=resolveAirportText($("dest").value);
+ if(!o||!d||!$("alt").value.trim()){alert("Enter origin, destination, and cruise altitude.");return}
+ $("origin").value=o;$("dest").value=d;
+ let ids=[o,...$("wps").value.split(/[ ,]+/).filter(Boolean),d];
  let pts=ids.map(resolve); if(pts.some(x=>!x)){alert("I couldn't find: "+ids.filter((x,i)=>!pts[i]).join(", "));return}
  route=pts; let sm=routeSamples(pts), raw=[];
  for(let i=0;i<sm.length;i++){let tr=bearing(sm[i],sm[Math.min(i+1,sm.length-1)]);let s=nearestService(sm[i],tr);if(s){let key=s[0]+"|"+s[5];if(!raw.length||raw.at(-1).key!==key)raw.push({key,call:s[1],facility:s[0],freq:s[5],at:sm[i]})}}
@@ -138,56 +124,21 @@ function buildRoute(){
  }
  let d=$("dest").value.trim().toUpperCase().replace(/^K(?=[A-Z]{3}$)/,"");
  if(ATC_DATA.ctaf[d])seq.push({key:d+"|CTAF",call:d+" CTAF",facility:d,freq:ATC_DATA.ctaf[d],at:pts.at(-1)});
- idx=0;logs=[];saveRecent(ids,alt);$("flight").classList.remove("hidden");saveActive();render();startGPS()
+ if(!seq.length){alert("No likely ATC sequence was found for this route. Try the route without optional waypoints, or log the actual handoffs so we can improve this case.");return}
+ idx=0;logs=[];$("flight").classList.remove("hidden");render()
 }
 function render(){
  if(!seq.length)return;
  let n=seq[Math.min(idx,seq.length-1)];$("nextCall").textContent=n.call+"  ·  "+n.facility;$("nextFreq").textContent=Number(n.freq).toFixed(3).replace(/0+$/,"").replace(/\.$/,"");
- $("afterNext").textContent=idx+1<seq.length?`After: ${seq[idx+1].call} ${Number(seq[idx+1].freq).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}`:"After: destination";
  $("sequence").innerHTML=seq.map((s,i)=>`<div class="step"><span class="pill">${i<idx?"PASSED":i===idx?"LIKELY NEXT":"AFTER"}</span> <b>${s.call}</b><br><span class="big" style="font-size:24px">${Number(s.freq).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}</span></div>`).join("");
- $("log").innerHTML=logs.length?logs.map(x=>`<div class="step">${x}</div>`).join(""):"No handoffs logged yet."; saveActive()
+ $("log").innerHTML=logs.length?logs.map(x=>`<div class="step">${x}</div>`).join(""):"No handoffs logged yet."
 }
-function handoff(){
- let s=seq[idx];
- let ok=confirm(`Predicted: ${s.call} ${s.freq}
-
-OK = prediction correct
-Cancel = enter a different frequency`);
- let actual=ok?String(s.freq):prompt("Frequency ATC actually assigned:","");
- logs.push(`${new Date().toLocaleTimeString()} — predicted ${s.call} ${s.freq}; actual ${actual||"not entered"}`);
- if(idx<seq.length-1)idx++;render()
-}
+function handoff(){let actual=prompt("Frequency ATC actually assigned (optional):",seq[idx]?.freq??"");let s=seq[idx];logs.push(`${new Date().toLocaleTimeString()} — predicted ${s.call} ${s.freq}; actual ${actual||"not entered"}`);if(idx<seq.length-1)idx++;render()}
 function prev(){if(idx>0)idx--;render()}
 function startGPS(){
  if(!navigator.geolocation){$("gps").textContent="GPS unavailable";return}
  $("gps").textContent="Requesting GPS…";
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
-
-function saveActive(){
- if(!seq.length||$("flight").classList.contains("hidden"))return;
- localStorage.setItem("atcActiveFlight",JSON.stringify({
-  o:$("origin").value,d:$("dest").value,w:$("wps").value,a:$("alt").value,seq,idx,logs
- }))
-}
-function restoreActive(){
- try{
-  let x=JSON.parse(localStorage.getItem("atcActiveFlight")||"null");if(!x)return;
-  $("origin").value=x.o;$("dest").value=x.d;$("wps").value=x.w;$("alt").value=x.a;
-  seq=x.seq||[];idx=x.idx||0;logs=x.logs||[];$("flight").classList.remove("hidden");render()
- }catch(e){}
-}
-function reverseRoute(){
- let o=$("origin").value,d=$("dest").value,w=$("wps").value.trim().split(/[ ,]+/).filter(Boolean).reverse().join(" ");
- $("origin").value=d;$("dest").value=o;$("wps").value=w;$("flight").classList.add("hidden");
- window.scrollTo({top:0,behavior:"smooth"})
-}
-function endFlight(){
- if(!confirm("End this flight and return to the blank home screen?"))return;
- localStorage.removeItem("atcActiveFlight");seq=[];idx=0;logs=[];
- $("origin").value="";$("dest").value="";$("wps").value="";$("alt").value="";
- $("flight").classList.add("hidden");renderRecents();window.scrollTo({top:0,behavior:"smooth"})
-}
-
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-renderRecents();restoreActive();if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js')}</script></body></html>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js')}</script></body></html>
