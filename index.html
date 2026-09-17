@@ -29,24 +29,33 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div></div>
 
 <div id="flight" class="hidden">
-<div class="card next"><div class="tag">LIKELY NEXT</div><div id="nextCall" class="call">—</div><div id="nextFreq" class="big">—</div>
-<div id="gps" class="gps">Guidance loaded · GPS not started</div></div>
-<div class="row">
-<button class="secondary" onclick="prev()">← Previous</button><button onclick="handoff()">ATC handed me off →</button>
+<div class="card next">
+  <div class="tag">LIKELY NEXT</div>
+  <div id="nextCall" class="call">—</div>
+  <div id="nextFreq" class="big">—</div>
+  <div id="gps" class="gps">Guidance loaded · GPS not started</div>
 </div>
+
 <div class="card">
-<div class="tag">LIKELY NEXT</div>
-<div id="focusCall" class="call">—</div>
-<div id="focusFreq" class="big">—</div>
-<div id="alternates" class="muted" style="margin-top:8px"></div>
-<div id="later" class="muted" style="margin-top:12px"></div>
-<button class="secondary" style="margin-top:14px" onclick="toggleSequence()">Show full predicted sequence</button>
-<div id="sequenceWrap" class="hidden" style="margin-top:12px"><div id="sequence"></div></div>
+  <div class="tag">PREDICTED ROUTE</div>
+  <div id="sequence"></div>
 </div>
-<div class="card"><button onclick="startGPS()">Start Flight — GPS Tracking</button>
-<div class="warn" style="margin-top:10px">Predictions are planning/awareness aids only. Frequencies and sector assignments can change. Use the frequency actually assigned by ATC.</div></div>
-<div class="card"><div class="tag">FLIGHT TEST LOG</div><div id="log" class="muted">No handoffs logged yet.</div>
-<button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button></div>
+
+<div class="row">
+  <button class="secondary" onclick="prev()">← Previous</button>
+  <button onclick="handoff()">ATC HANDED ME OFF →</button>
+</div>
+
+<div class="card">
+  <button onclick="startGPS()">Start Flight — GPS Tracking</button>
+  <div class="warn" style="margin-top:10px">Predictions are planning/awareness aids only. Frequencies and sector assignments can change. Use the frequency actually assigned by ATC.</div>
+</div>
+
+<div class="card">
+  <div class="tag">FLIGHT TEST LOG</div>
+  <div id="log" class="muted">No handoffs logged yet.</div>
+  <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
+</div>
 </div>
 </main><script src="data.js"></script><script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
@@ -146,16 +155,26 @@ function groupedFrom(start){
  return groups
 }
 function fmtFreq(f){return Number(f).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}
-function toggleSequence(){
- let w=$("sequenceWrap"),b=event.currentTarget;
- let hidden=w.classList.toggle("hidden");
- b.textContent=hidden?"Show full predicted sequence":"Hide full predicted sequence"
-}
-
 function render(){
  if(!seq.length)return;
- let n=seq[Math.min(idx,seq.length-1)];$("nextCall").textContent=n.call+"  ·  "+n.facility;$("nextFreq").textContent=Number(n.freq).toFixed(3).replace(/0+$/,"").replace(/\.$/,"");
- $("sequence").innerHTML=seq.map((s,i)=>`<div class="step"><span class="pill">${i<idx?"PASSED":i===idx?"LIKELY NEXT":"AFTER"}</span> <b>${s.call}</b><br><span class="big" style="font-size:24px">${Number(s.freq).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}</span></div>`).join("");
+ let n=seq[Math.min(idx,seq.length-1)];
+ $("nextCall").textContent=n.call;
+ $("nextFreq").textContent=fmtFreq(n.freq);
+
+ let groups=[];
+ for(let i=0;i<seq.length;i++){
+   let s=seq[i], last=groups.at(-1);
+   if(last && last.call===s.call){
+     if(!last.freqs.includes(s.freq))last.freqs.push(s.freq);
+     last.end=i;
+   }else{
+     groups.push({call:s.call,freqs:[s.freq],start:i,end:i});
+   }
+ }
+ $("sequence").innerHTML=groups.map(g=>{
+   let state=g.end<idx?"PASSED":(idx>=g.start&&idx<=g.end)?"LIKELY NEXT":"AFTER";
+   return `<div class="step"><span class="pill">${state}</span> <b>${g.call}</b><br><span class="big" style="font-size:24px">${g.freqs.map(fmtFreq).join(" / ")}</span></div>`;
+ }).join("");
  $("log").innerHTML=logs.length?logs.map(x=>`<div class="step">${x}</div>`).join(""):"No handoffs logged yet."
 }
 function handoff(){let actual=prompt("Frequency ATC actually assigned (optional):",seq[idx]?.freq??"");let s=seq[idx];logs.push(`${new Date().toLocaleTimeString()} — predicted ${s.call} ${s.freq}; actual ${actual||"not entered"}`);if(idx<seq.length-1)idx++;render()}

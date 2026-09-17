@@ -18,3 +18,5 @@ V5: fixed Origin search-results container bug. Get ATC Guidance calculates seque
 V6: fixed fatal JavaScript duplicate-variable parse error that disabled search and Get ATC Guidance. Search panels span full width.
 
 V7: focused cockpit guidance. One large likely-next facility/frequency, same-facility alternates grouped, one later facility, collapsible grouped full sequence. Existing GPS progression retained.
+
+V8: full predicted route opens automatically; adjacent repeated facility frequencies are grouped on one line; one large LIKELY NEXT remains at top; GPS/manual handoff advances the highlighted route position.
