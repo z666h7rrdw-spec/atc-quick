@@ -16,3 +16,5 @@ V4: rebuilt from original working prediction engine; blank home; visible in-app 
 V5: fixed Origin search-results container bug. Get ATC Guidance calculates sequence; Start Flight separately starts GPS tracking.
 
 V6: fixed fatal JavaScript duplicate-variable parse error that disabled search and Get ATC Guidance. Search panels span full width.
+
+V7: focused cockpit guidance. One large likely-next facility/frequency, same-facility alternates grouped, one later facility, collapsible grouped full sequence. Existing GPS progression retained.

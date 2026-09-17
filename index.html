@@ -34,7 +34,15 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 <div class="row">
 <button class="secondary" onclick="prev()">← Previous</button><button onclick="handoff()">ATC handed me off →</button>
 </div>
-<div class="card"><div class="tag">PREDICTED SEQUENCE</div><div id="sequence"></div></div>
+<div class="card">
+<div class="tag">LIKELY NEXT</div>
+<div id="focusCall" class="call">—</div>
+<div id="focusFreq" class="big">—</div>
+<div id="alternates" class="muted" style="margin-top:8px"></div>
+<div id="later" class="muted" style="margin-top:12px"></div>
+<button class="secondary" style="margin-top:14px" onclick="toggleSequence()">Show full predicted sequence</button>
+<div id="sequenceWrap" class="hidden" style="margin-top:12px"><div id="sequence"></div></div>
+</div>
 <div class="card"><button onclick="startGPS()">Start Flight — GPS Tracking</button>
 <div class="warn" style="margin-top:10px">Predictions are planning/awareness aids only. Frequencies and sector assignments can change. Use the frequency actually assigned by ATC.</div></div>
 <div class="card"><div class="tag">FLIGHT TEST LOG</div><div id="log" class="muted">No handoffs logged yet.</div>
@@ -127,6 +135,23 @@ function buildRoute(){
  if(!seq.length){alert("No likely ATC sequence was found for this route. Try the route without optional waypoints, or log the actual handoffs so we can improve this case.");return}
  idx=0;logs=[];$("flight").classList.remove("hidden");render()
 }
+
+function groupedFrom(start){
+ let groups=[];
+ for(let i=start;i<seq.length;i++){
+   let s=seq[i], last=groups.at(-1);
+   if(last && last.call===s.call){ if(!last.freqs.includes(s.freq))last.freqs.push(s.freq); }
+   else groups.push({call:s.call,freqs:[s.freq],first:i});
+ }
+ return groups
+}
+function fmtFreq(f){return Number(f).toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}
+function toggleSequence(){
+ let w=$("sequenceWrap"),b=event.currentTarget;
+ let hidden=w.classList.toggle("hidden");
+ b.textContent=hidden?"Show full predicted sequence":"Hide full predicted sequence"
+}
+
 function render(){
  if(!seq.length)return;
  let n=seq[Math.min(idx,seq.length-1)];$("nextCall").textContent=n.call+"  ·  "+n.facility;$("nextFreq").textContent=Number(n.freq).toFixed(3).replace(/0+$/,"").replace(/\.$/,"");
