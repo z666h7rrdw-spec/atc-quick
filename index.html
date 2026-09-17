@@ -21,21 +21,21 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 <div class="top"><div><div class="tag">FLIGHT-TEST BUILD</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
-<div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div>
+<div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults"></div>
 <div><label>DESTINATION</label><input id="dest" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('dest')"></div><div id="destResults" class="searchResults"></div>
 <div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" autocomplete="off" autocapitalize="characters" oninput="showFixResults()"></div><div id="fixResults" class="searchResults full"></div>
 <div><label>CRUISE ALTITUDE</label><input id="alt" value="" inputmode="numeric"></div>
-<div><label>&nbsp;</label><button onclick="buildRoute()">Start Flight</button></div>
+<div><label>&nbsp;</label><button onclick="buildRoute()">Get ATC Guidance</button></div>
 </div></div>
 
 <div id="flight" class="hidden">
 <div class="card next"><div class="tag">LIKELY NEXT</div><div id="nextCall" class="call">—</div><div id="nextFreq" class="big">—</div>
-<div id="gps" class="gps">GPS not started</div></div>
+<div id="gps" class="gps">Guidance loaded · GPS not started</div></div>
 <div class="row">
 <button class="secondary" onclick="prev()">← Previous</button><button onclick="handoff()">ATC handed me off →</button>
 </div>
 <div class="card"><div class="tag">PREDICTED SEQUENCE</div><div id="sequence"></div></div>
-<div class="card"><button class="secondary" onclick="startGPS()">Use GPS to follow route</button>
+<div class="card"><button onclick="startGPS()">Start Flight — GPS Tracking</button>
 <div class="warn" style="margin-top:10px">Predictions are planning/awareness aids only. Frequencies and sector assignments can change. Use the frequency actually assigned by ATC.</div></div>
 <div class="card"><div class="tag">FLIGHT TEST LOG</div><div id="log" class="muted">No handoffs logged yet.</div>
 <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button></div>
@@ -77,7 +77,7 @@ function airportMatches(q){
  return out.sort((a,b)=>a.score-b.score||a.name.length-b.name.length).slice(0,8)
 }
 function showAirportResults(which){
- let input=$(which), box=$(which+"Results"), hits=airportMatches(input.value);
+ let input=$(which), box=$(which+"Results"); if(!input||!box)return; let hits=airportMatches(input.value);
  if(!hits.length){box.classList.remove("show");box.innerHTML="";return}
  box.innerHTML=hits.map(x=>`<div class="searchItem" onclick="pickAirport('${which}','${x.id}')"><b>${x.id} — ${x.name}</b><span>Tap to select</span></div>`).join("");
  box.classList.add("show")

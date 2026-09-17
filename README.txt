@@ -12,3 +12,5 @@ Offline: install as a PWA and load once online. Route/frequency database and pre
 GPS can operate without cellular data after the app is installed/cached.
 
 V4: rebuilt from original working prediction engine; blank home; visible in-app airport-name/identifier and waypoint search; Start Flight.
+
+V5: fixed Origin search-results container bug. Get ATC Guidance calculates sequence; Start Flight separately starts GPS tracking.
