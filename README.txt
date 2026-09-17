@@ -20,3 +20,5 @@ V6: fixed fatal JavaScript duplicate-variable parse error that disabled search a
 V7: focused cockpit guidance. One large likely-next facility/frequency, same-facility alternates grouped, one later facility, collapsible grouped full sequence. Existing GPS progression retained.
 
 V8: full predicted route opens automatically; adjacent repeated facility frequencies are grouped on one line; one large LIKELY NEXT remains at top; GPS/manual handoff advances the highlighted route position.
+
+V9: adds a one-tap current-facility frequency panel. It lists all frequencies in the packaged FAA service data for the current predicted facility, including associated airport/sector notes where available. The button follows LIKELY NEXT as the flight advances.
