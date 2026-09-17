@@ -16,12 +16,16 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 <div class="top"><div><div class="tag">FLIGHT-TEST BUILD</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
-<div><label>ORIGIN</label><input id="origin" value="KHBI" autocapitalize="characters"></div>
-<div><label>DESTINATION</label><input id="dest" value="KSUT" autocapitalize="characters"></div>
-<div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="RAEFO" autocapitalize="characters"></div>
-<div><label>CRUISE ALTITUDE</label><input id="alt" value="7500" inputmode="numeric"></div>
+<div><label>ORIGIN</label><input id="origin" value="" placeholder="KHBI or Asheboro" autocapitalize="characters" list="airportList" oninput="airportSuggest(this)"></div>
+<div><label>DESTINATION</label><input id="dest" value="" placeholder="KSUT or Southport" autocapitalize="characters" list="airportList" oninput="airportSuggest(this)"></div>
+<div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" placeholder="RAEFO" autocapitalize="characters" list="fixList" oninput="fixSuggest(this)"></div>
+<div><label>CRUISE ALTITUDE</label><input id="alt" value="" placeholder="7500" inputmode="numeric"></div>
 <div><label>&nbsp;</label><button onclick="buildRoute()">Build likely handoffs</button></div>
-</div></div>
+<div class="full"><button class="secondary" type="button" onclick="addWaypoint()">+ Add waypoint</button></div>
+<div class="full"><div class="tag" style="margin:8px 0 5px">RECENT ROUTES</div><div id="recents" class="muted">No recent routes yet.</div></div>
+</div>
+<datalist id="airportList"></datalist><datalist id="fixList"></datalist>
+</div>
 
 <div id="flight" class="hidden">
 <div class="card next"><div class="tag">LIKELY NEXT</div><div id="nextCall" class="call">—</div><div id="nextFreq" class="big">—</div>
@@ -50,8 +54,56 @@ function nearestService(p,track){
  for(const s of ATC_DATA.services){let d=dist(p,[s[3],s[4]]);if(d<bd && d<75 && inSector(track,s[6])){bd=d;best=s}}
  return best
 }
+
+function normAirportInput(v){
+ v=v.trim();
+ let m=v.match(/^([A-Z0-9]{3,4})\s+[—-]\s+/i);
+ return (m?m[1]:v).toUpperCase()
+}
+function airportSuggest(el){
+ let q=el.value.trim().toUpperCase(), dl=$("airportList"); dl.innerHTML="";
+ if(q.length<2)return;
+ let arr=[];
+ for(const [id,a] of Object.entries(ATC_DATA.airports)){
+   if(id.length<3)continue;
+   let name=String(a[2]||"").toUpperCase();
+   if(id.startsWith(q)||name.includes(q)) arr.push([id,a[2]]);
+   if(arr.length>=12)break;
+ }
+ dl.innerHTML=arr.map(x=>`<option value="${x[0]} — ${x[1]}"></option>`).join("")
+}
+function fixSuggest(el){
+ let q=el.value.trim().toUpperCase().split(/[ ,]+/).pop(), dl=$("fixList"); dl.innerHTML="";
+ if(q.length<2)return;
+ let arr=[];
+ for(const id of Object.keys(ATC_DATA.fixes)){if(id.startsWith(q)){arr.push(id);if(arr.length>=12)break}}
+ dl.innerHTML=arr.map(x=>`<option value="${x}"></option>`).join("")
+}
+function addWaypoint(){
+ let v=prompt("Enter FAA waypoint/fix identifier:");
+ if(v){let e=$("wps");e.value=(e.value+" "+v.toUpperCase()).trim()}
+}
+function saveRecent(ids,alt){
+ let rs=JSON.parse(localStorage.getItem("atcRecentRoutes")||"[]");
+ let r={o:ids[0],d:ids.at(-1),w:ids.slice(1,-1).join(" "),a:alt};
+ rs=rs.filter(x=>JSON.stringify(x)!==JSON.stringify(r));rs.unshift(r);rs=rs.slice(0,5);
+ localStorage.setItem("atcRecentRoutes",JSON.stringify(rs));renderRecents()
+}
+function renderRecents(){
+ let rs=JSON.parse(localStorage.getItem("atcRecentRoutes")||"[]"), e=$("recents");
+ if(!rs.length){e.textContent="No recent routes yet.";return}
+ e.innerHTML=rs.map((r,i)=>`<button class="secondary" style="margin:4px 0;text-align:left" onclick="loadRecent(${i})">${r.o}${r.w?" → "+r.w.replace(/ /g," → "):""} → ${r.d} · ${r.a} ft</button>`).join("")
+}
+function loadRecent(i){
+ let r=JSON.parse(localStorage.getItem("atcRecentRoutes")||"[]")[i];
+ $("origin").value=r.o;$("dest").value=r.d;$("wps").value=r.w;$("alt").value=r.a
+}
+
 function buildRoute(){
- let ids=[$("origin").value,...$("wps").value.split(/[ ,]+/).filter(Boolean),$("dest").value];
+ let o=normAirportInput($("origin").value), d=normAirportInput($("dest").value);
+ let alt=$("alt").value.trim();
+ if(!o||!d||!alt){alert("Enter an origin, destination, and cruise altitude.");return}
+ let ids=[o,...$("wps").value.toUpperCase().split(/[ ,]+/).filter(Boolean),d];
  let pts=ids.map(resolve); if(pts.some(x=>!x)){alert("I couldn't find: "+ids.filter((x,i)=>!pts[i]).join(", "));return}
  route=pts; let sm=routeSamples(pts), raw=[];
  for(let i=0;i<sm.length;i++){let tr=bearing(sm[i],sm[Math.min(i+1,sm.length-1)]);let s=nearestService(sm[i],tr);if(s){let key=s[0]+"|"+s[5];if(!raw.length||raw.at(-1).key!==key)raw.push({key,call:s[1],facility:s[0],freq:s[5],at:sm[i]})}}
@@ -68,7 +120,7 @@ function buildRoute(){
  }
  let d=$("dest").value.trim().toUpperCase().replace(/^K(?=[A-Z]{3}$)/,"");
  if(ATC_DATA.ctaf[d])seq.push({key:d+"|CTAF",call:d+" CTAF",facility:d,freq:ATC_DATA.ctaf[d],at:pts.at(-1)});
- idx=0;logs=[];$("flight").classList.remove("hidden");render()
+ idx=0;logs=[];saveRecent(ids,alt);$("flight").classList.remove("hidden");render()
 }
 function render(){
  if(!seq.length)return;
@@ -84,4 +136,4 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js')}</script></body></html>
+renderRecents();if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js')}</script></body></html>
