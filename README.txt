@@ -22,3 +22,5 @@ V7: focused cockpit guidance. One large likely-next facility/frequency, same-fac
 V8: full predicted route opens automatically; adjacent repeated facility frequencies are grouped on one line; one large LIKELY NEXT remains at top; GPS/manual handoff advances the highlighted route position.
 
 V9: adds a one-tap current-facility frequency panel. It lists all frequencies in the packaged FAA service data for the current predicted facility, including associated airport/sector notes where available. The button follows LIKELY NEXT as the flight advances.
+
+V10: removes facility-frequency popup/button. Each predicted-route facility row now shows its predicted frequency(s) prominently on the left and other known packaged FAA service frequencies for that same facility in smaller text on the right.
