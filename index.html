@@ -39,10 +39,13 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div id="gps" class="gps">Guidance loaded · GPS not started</div>
 </div>
 <button class="secondary" onclick="openFreqSearch()" style="width:100%;margin-bottom:10px">🔎 Frequency Search</button>
+<div id="departureFreqCard"></div>
 <div class="card">
   <div class="tag">PREDICTED ROUTE</div>
   <div id="sequence"></div>
 </div>
+
+<div id="destinationFreqCard"></div>
 
 <div class="row">
   <button class="secondary" onclick="prev()">← Previous</button>
@@ -261,7 +264,13 @@ function runFreqSearch(){
     </div>`).join("");
 }
 
-function render(){
+
+function normalizeAirportId(id){id=String(id||"").trim().toUpperCase();return(id.startsWith("K")&&id.length===4)?id.slice(1):id;}
+function airportRecord(id){const x=normalizeAirportId(id);return(ATC_DATA.airports||{})[x]||(ATC_DATA.airports||{})["K"+x]||null;}
+function fullAirportFrequencies(id){const x=normalizeAirportId(id),r=[],seen=new Set();for(const s of(ATC_DATA.services||[])){if(!Array.isArray(s)||normalizeAirportId(s[2])!==x)continue;const n=Number(s[5]);if(!Number.isFinite(n)||n<100||n>150)continue;const fr=fmtFreq(n),label=String(s[6]||s[1]||s[0]||"ATC").trim(),k=label+"|"+fr;if(!seen.has(k)){seen.add(k);r.push({label,fr});}}r.sort((a,b)=>parseFloat(a.fr)-parseFloat(b.fr));return r;}
+function airportFrequencyCard(id,kind){const x=normalizeAirportId(id),a=airportRecord(x),name=a?String(a[2]||""):"",rows=fullAirportFrequencies(x),ident=x.length===3?"K"+x:x;return `<div class="card"><div class="tag">${kind==="departure"?"DEPARTURE":"DESTINATION"} — ${ident}</div><div style="font-size:18px;font-weight:800;margin-bottom:8px">${name||ident}</div>${rows.length?rows.map(v=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><span style="font-weight:700">${v.label}</span><span class="big" style="font-size:22px;white-space:nowrap">${v.fr}</span></div>`).join(""):'<div class="muted">No airport-specific frequencies found in the packaged FAA data.</div>'}</div>`;}
+
+function render(){const ov=($("origin").value||"").trim(),dv=($("destination").value||"").trim();if($("departureFreqCard"))$("departureFreqCard").innerHTML=ov?airportFrequencyCard(ov,"departure"):"";if($("destinationFreqCard"))$("destinationFreqCard").innerHTML=dv?airportFrequencyCard(dv,"destination"):"";
  if(!seq.length)return;
  let n=seq[Math.min(idx,seq.length-1)];
  $("nextCall").textContent=n.call;
