@@ -46,5 +46,3 @@ V19: preserves the working v18 Frequency Search UI and adds domestic/ICAO airpor
 V20: preserves v19 identifier matching and Search button, and restores automatic frequency results while typing using input + keyup event fallbacks.
 
 V21: airport identifiers now autocomplete from 3 characters (KGS -> KGSO/Greensboro, KAT -> KATL/Atlanta) and unrelated facility substring results are suppressed while entering identifiers.
-
-V23 rebuilt from v21; isolated departure/destination frequency cards.

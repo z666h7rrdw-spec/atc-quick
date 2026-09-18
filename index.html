@@ -39,13 +39,10 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div id="gps" class="gps">Guidance loaded · GPS not started</div>
 </div>
 <button class="secondary" onclick="openFreqSearch()" style="width:100%;margin-bottom:10px">🔎 Frequency Search</button>
-<div id="depAirportFreqs"></div>
 <div class="card">
   <div class="tag">PREDICTED ROUTE</div>
   <div id="sequence"></div>
 </div>
-
-<div id="destAirportFreqs"></div>
 
 <div class="row">
   <button class="secondary" onclick="prev()">← Previous</button>
@@ -264,11 +261,6 @@ function runFreqSearch(){
     </div>`).join("");
 }
 
-
-function aqNorm(v){v=String(v||"").trim().toUpperCase();return(v.startsWith("K")&&v.length===4)?v.slice(1):v;}
-function aqFreqs(v){const id=aqNorm(v),r=[],seen=new Set();for(const s of(ATC_DATA.services||[])){if(!Array.isArray(s)||aqNorm(s[2])!==id)continue;const n=Number(s[5]);if(!Number.isFinite(n)||n<100||n>150)continue;const fr=fmtFreq(n),label=String(s[6]||s[1]||s[0]||"ATC").trim(),k=label+"|"+fr;if(!seen.has(k)){seen.add(k);r.push({label,fr});}}r.sort((a,b)=>parseFloat(a.fr)-parseFloat(b.fr));return r;}
-function aqCard(v,title){const id=aqNorm(v),ident=id.length===3?"K"+id:id,a=(ATC_DATA.airports||{})[id]||(ATC_DATA.airports||{})[ident],name=a?String(a[2]||""):"",r=aqFreqs(id);if(!r.length)return"";return `<div class="card"><div class="tag">${title} — ${ident}</div><div style="font-size:18px;font-weight:800;margin-bottom:8px">${name||ident}</div>${r.map(x=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px"><span style="font-weight:700">${x.label}</span><span class="big" style="font-size:22px">${x.fr}</span></div>`).join("")}</div>`;}
-function aqRefresh(){const d=document.getElementById("depAirportFreqs"),t=document.getElementById("destAirportFreqs");if(d)d.innerHTML=aqCard(document.getElementById("origin").value,"DEPARTURE");if(t)t.innerHTML=aqCard(document.getElementById("destination").value,"DESTINATION");}
 function render(){
  if(!seq.length)return;
  let n=seq[Math.min(idx,seq.length-1)];
@@ -312,8 +304,6 @@ function render(){
    </div>`;
  }).join("");
  $("log").innerHTML=logs.length?logs.map(x=>`<div class="step">${x}</div>`).join(""):"No handoffs logged yet."
-
-aqRefresh();
 }
 function handoff(){let actual=prompt("Frequency ATC actually assigned (optional):",seq[idx]?.freq??"");let s=seq[idx];logs.push(`${new Date().toLocaleTimeString()} — predicted ${s.call} ${s.freq}; actual ${actual||"not entered"}`);if(idx<seq.length-1)idx++;render()}
 function prev(){if(idx>0)idx--;render()}
