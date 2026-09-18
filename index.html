@@ -320,46 +320,38 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-wor
 
 <script>
 (function(){
-  function norm(v){
-    v=String(v||"").trim().toUpperCase();
-    return (v.startsWith("K")&&v.length===4)?v.slice(1):v;
-  }
-  function rowsFor(v){
-    const id=norm(v), rows=[], seen=new Set();
-    for(const s of ((window.ATC_DATA&&ATC_DATA.services)||[])){
-      if(!Array.isArray(s) || norm(s[2])!==id) continue;
-      const n=Number(s[5]);
-      if(!Number.isFinite(n)||n<100||n>150) continue;
-      const fr=(Math.round(n*1000)/1000).toString();
-      const label=String(s[6]||s[1]||s[0]||"ATC").trim();
-      const key=label+"|"+fr;
-      if(!seen.has(key)){seen.add(key);rows.push({label,fr});}
-    }
-    rows.sort((a,b)=>parseFloat(a.fr)-parseFloat(b.fr));
-    return rows;
-  }
-  function card(v,title){
-    const id=norm(v), ident=id.length===3?"K"+id:id, rows=rowsFor(id);
-    if(!id || !rows.length) return "";
-    return '<div class="card"><div class="tag">'+title+' — '+ident+'</div>'+
-      rows.map(x=>'<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><span style="font-weight:700">'+x.label+'</span><span class="big" style="font-size:22px;white-space:nowrap">'+x.fr+'</span></div>').join("")+
-      '</div>';
-  }
-  function refreshAirportPanels(){
-    const o=document.getElementById("origin"), d=document.getElementById("destination");
-    const dp=document.getElementById("aqDeparturePanel"), ap=document.getElementById("aqDestinationPanel");
-    if(dp&&o) dp.innerHTML=card(o.value,"DEPARTURE FREQUENCIES");
-    if(ap&&d) ap.innerHTML=card(d.value,"DESTINATION FREQUENCIES");
-  }
-
-  // Observe the already-working guidance screen. Only after v21 successfully
-  // populates its sequence do we fill these independent panels.
-  const seq=document.getElementById("sequence");
-  if(seq){
-    new MutationObserver(function(){
-      if(seq.children.length || seq.textContent.trim()) refreshAirportPanels();
-    }).observe(seq,{childList:true,subtree:true,characterData:true});
-  }
+ function norm(v){v=String(v||"").trim().toUpperCase();return(v.startsWith("K")&&v.length===4)?v.slice(1):v;}
+ function rows(v){
+   var id=norm(v),r=[],seen={};
+   (ATC_DATA.services||[]).forEach(function(s){
+     if(!Array.isArray(s)||norm(s[2])!==id)return;
+     var n=Number(s[5]); if(!isFinite(n)||n<100||n>150)return;
+     var fr=(Math.round(n*1000)/1000).toString();
+     var label=String(s[6]||s[1]||s[0]||"ATC").trim(),k=label+"|"+fr;
+     if(!seen[k]){seen[k]=1;r.push({label:label,fr:fr});}
+   });
+   r.sort(function(a,b){return parseFloat(a.fr)-parseFloat(b.fr);}); return r;
+ }
+ function card(v,title){
+   var id=norm(v), ident=id.length===3?"K"+id:id, r=rows(id);
+   if(!id)return "";
+   var body=r.length?r.map(function(x){return '<div class="step" style="display:flex;justify-content:space-between;gap:12px"><span style="font-weight:700">'+x.label+'</span><span class="big" style="font-size:22px">'+x.fr+'</span></div>';}).join(""):'<div class="muted">No airport-specific frequencies found in packaged data.</div>';
+   return '<div class="card"><div class="tag">'+title+' — '+ident+'</div>'+body+'</div>';
+ }
+ function populate(){
+   var o=document.getElementById("origin"),d=document.getElementById("destination");
+   var a=document.getElementById("aqDeparturePanel"),b=document.getElementById("aqDestinationPanel");
+   if(!o||!d||!a||!b)return;
+   a.innerHTML=card(o.value,"DEPARTURE FREQUENCIES");
+   b.innerHTML=card(d.value,"DESTINATION FREQUENCIES");
+ }
+ // Do not touch buildRoute/render. Watch for successful v21 route output.
+ var seq=document.getElementById("sequence");
+ if(seq){
+   new MutationObserver(function(){
+     if(seq.textContent.trim()) setTimeout(populate,0);
+   }).observe(seq,{childList:true,subtree:true,characterData:true});
+ }
 })();
 </script>
 </body></html>

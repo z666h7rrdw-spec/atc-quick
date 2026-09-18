@@ -47,4 +47,4 @@ V20: preserves v19 identifier matching and Search button, and restores automatic
 
 V21: airport identifiers now autocomplete from 3 characters (KGS -> KGSO/Greensboro, KAT -> KATL/Atlanta) and unrelated facility substring results are suppressed while entering identifiers.
 
-V24: rebuilt from working v21. Departure/destination frequency panels are independent observers that run only after the original route sequence populates; original render/buildRoute/search logic is untouched.
+V25: v21 core untouched. Independent departure/destination frequency panels observe successful route output.
