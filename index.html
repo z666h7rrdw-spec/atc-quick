@@ -187,9 +187,15 @@ function render(){
  $("sequence").innerHTML=groups.map(g=>{
    let state=g.end<idx?"PASSED":(idx>=g.start&&idx<=g.end)?"LIKELY NEXT":"AFTER";
    let other=knownOtherFreqs(g,g.freqs);
-   let right=other.length ? `<div style="min-width:145px;text-align:right;padding-left:12px"><div class="muted" style="font-size:12px">OTHER</div><div style="font-size:16px;font-weight:700;line-height:1.45">${other.join(" · ")}</div></div>` : "";
-   return `<div class="step" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-     <div style="min-width:0;flex:1"><span class="pill">${state}</span> <b>${g.call}</b><br><span class="big" style="font-size:24px">${g.freqs.map(fmtFreq).join(" / ")}</span></div>
+   let right=other.length ? `<div style="grid-column:2;min-width:0;text-align:right;align-self:center;border-left:1px solid rgba(140,170,200,.22);padding-left:10px">
+     <div class="muted" style="font-size:11px;letter-spacing:.04em">OTHER</div>
+     <div style="font-size:13px;font-weight:700;line-height:1.5;white-space:normal;overflow:hidden">${other.map(x=>`<span style="display:inline-block;white-space:nowrap;margin-left:7px">${x}</span>`).join("")}</div>
+   </div>` : "";
+   return `<div class="step" style="display:grid;grid-template-columns:${other.length?"minmax(0, 56%) minmax(0, 44%)":"minmax(0, 1fr)"};column-gap:10px;align-items:stretch">
+     <div style="grid-column:1;min-width:0;overflow:hidden">
+       <div><span class="pill">${state}</span> <b style="overflow-wrap:anywhere">${g.call}</b></div>
+       <span class="big" style="font-size:24px;line-height:1.25;display:block;white-space:normal;overflow-wrap:normal">${g.freqs.map(fmtFreq).join(" / ")}</span>
+     </div>
      ${right}
    </div>`;
  }).join("");

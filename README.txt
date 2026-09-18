@@ -26,3 +26,7 @@ V9: adds a one-tap current-facility frequency panel. It lists all frequencies in
 V10: removes facility-frequency popup/button. Each predicted-route facility row now shows its predicted frequency(s) prominently on the left and other known packaged FAA service frequencies for that same facility in smaller text on the right.
 
 V11: new ATC Quick home-screen/app icon using the approved aircraft/tower artwork, cropped to remove the white outer area. App functionality remains v10.
+
+V12: fixes route-row overlap when facilities have many OTHER frequencies. Main predicted frequencies stay in a protected left column; OTHER uses a fixed 42% right column, smaller text, wrapping, and automatic row height.
+
+V13: route rows now use a strict CSS grid. OTHER frequencies are isolated in a 44% right column with a divider; each frequency is a nonbreaking token that wraps only between frequencies. This prevents long OTHER lists from overlapping the predicted facility/frequency column.
