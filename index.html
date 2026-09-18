@@ -65,7 +65,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <div class="tag">QUICK FREQUENCY SEARCH</div>
     <div class="muted" style="margin:5px 0 10px">Search a facility, city, airport name, or identifier. This does not change your route.</div>
     <input id="freqSearchInput" placeholder="Atlanta, Greensboro, KATL..." autocomplete="off"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();runFreqSearch();}">
+      onkeydown="if(event.key==='Enter'){event.preventDefault();runFreqSearch();}" oninput="runFreqSearch()" onkeyup="runFreqSearch()">
     <button type="button" onclick="runFreqSearch()" style="width:100%;margin-top:10px;padding:14px;font-size:18px;font-weight:800">Search</button>
     <div id="freqSearchResults" style="margin-top:10px"></div>
     <button class="secondary" style="margin-top:12px" onclick="closeFreqSearch()">Close</button>
@@ -174,7 +174,7 @@ function fmtFreq(f){return Number(f).toFixed(3).replace(/0+$/,"").replace(/\.$/,
 function openFreqSearch(){
   $("freqSearchPanel").classList.remove("hidden");
   $("freqSearchInput").value="";
-  $("freqSearchResults").innerHTML='<div class="muted">Enter an airport, city, or facility, then tap Search.</div>';
+  $("freqSearchResults").innerHTML='<div class="muted">Start typing an airport, city, or facility. Results appear automatically.</div>';
   setTimeout(()=>$("freqSearchInput").focus(),50);
 }
 function closeFreqSearch(){ $("freqSearchPanel").classList.add("hidden"); }
