@@ -30,3 +30,5 @@ V11: new ATC Quick home-screen/app icon using the approved aircraft/tower artwor
 V12: fixes route-row overlap when facilities have many OTHER frequencies. Main predicted frequencies stay in a protected left column; OTHER uses a fixed 42% right column, smaller text, wrapping, and automatic row height.
 
 V13: route rows now use a strict CSS grid. OTHER frequencies are isolated in a 44% right column with a divider; each frequency is a nonbreaking token that wraps only between frequencies. This prevents long OTHER lists from overlapping the predicted facility/frequency column.
+
+V14: adds Quick Frequency Search from the active flight screen. Search facility/city/airport/identifier (e.g. Atlanta or KATL) against packaged FAA data without changing the active route or GPS tracking. V13 route layout retained.
