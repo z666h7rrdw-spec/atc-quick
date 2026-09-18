@@ -64,7 +64,9 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:560px;margin:38px auto">
     <div class="tag">QUICK FREQUENCY SEARCH</div>
     <div class="muted" style="margin:5px 0 10px">Search a facility, city, airport name, or identifier. This does not change your route.</div>
-    <input id="freqSearchInput" placeholder="Atlanta, Greensboro, KATL..." autocomplete="off" oninput="runFreqSearch()" onkeyup="runFreqSearch()">
+    <input id="freqSearchInput" placeholder="Atlanta, Greensboro, KATL..." autocomplete="off"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();runFreqSearch();}">
+    <button type="button" onclick="runFreqSearch()" style="width:100%;margin-top:10px;padding:14px;font-size:18px;font-weight:800">Search</button>
     <div id="freqSearchResults" style="margin-top:10px"></div>
     <button class="secondary" style="margin-top:12px" onclick="closeFreqSearch()">Close</button>
   </div>
@@ -171,82 +173,76 @@ function fmtFreq(f){return Number(f).toFixed(3).replace(/0+$/,"").replace(/\.$/,
 
 function openFreqSearch(){
   $("freqSearchPanel").classList.remove("hidden");
-  let input=$("freqSearchInput");
-  input.value="";
-  $("freqSearchResults").innerHTML='<div class="muted">Type at least 2 characters.</div>';
-  input.oninput=runFreqSearch;
-  input.onkeyup=runFreqSearch;
-  setTimeout(()=>input.focus(),50);
+  $("freqSearchInput").value="";
+  $("freqSearchResults").innerHTML='<div class="muted">Enter an airport, city, or facility, then tap Search.</div>';
+  setTimeout(()=>$("freqSearchInput").focus(),50);
 }
-function closeFreqSearch(){
-  $("freqSearchPanel").classList.add("hidden");
-}
-function airportRows(){
-  let a=ATC_DATA.airports||[];
-  if(Array.isArray(a)) return a;
-  return Object.entries(a).map(([id,v])=>{
-    if(Array.isArray(v)) return [id,...v];
-    if(v && typeof v==="object") return [id,v.name||v.airport_name||v.city||"",v];
-    return [id,String(v||"")];
-  });
-}
-function serviceRows(){
-  let s=ATC_DATA.services||[];
-  return Array.isArray(s)?s:Object.values(s);
-}
+function closeFreqSearch(){ $("freqSearchPanel").classList.add("hidden"); }
+
 function runFreqSearch(){
-  let input=$("freqSearchInput");
-  let q=(input.value||"").trim().toUpperCase();
-  let box=$("freqSearchResults");
+  const q=($("freqSearchInput").value||"").trim().toUpperCase();
+  const box=$("freqSearchResults");
   if(q.length<2){
-    box.innerHTML='<div class="muted">Type at least 2 characters.</div>';
+    box.innerHTML='<div class="muted">Enter at least 2 characters.</div>';
     return;
   }
 
-  let services=serviceRows();
-  let airports=airportRows();
-  let matchedAirportIds=new Set();
-
-  airports.forEach(a=>{
-    let id=String(a[0]||"").toUpperCase();
-    let vals=a.map(x=>typeof x==="string"?x:"").join(" ").toUpperCase();
-    let local=id.startsWith("K")?id.slice(1):id;
-    if(id.includes(q)||local.includes(q)||vals.includes(q)) matchedAirportIds.add(id);
-  });
-
-  let groups=new Map();
-  function add(s){
-    if(!Array.isArray(s)) return;
-    let fac=String(s[0]||"").trim();
-    let label=String(s[1]||fac||s[2]||"").trim();
-    let apt=String(s[2]||"").trim().toUpperCase();
-    let fr=fmtFreq(s[5]);
-    if(!fr) return;
-    let key=fac||label||apt;
-    if(!groups.has(key)) groups.set(key,{label:label||fac||apt,freqs:[]});
-    let g=groups.get(key);
-    if(!g.freqs.includes(fr)) g.freqs.push(fr);
+  // Resolve airport matches directly from the actual ATC_DATA.airports object.
+  const airportIds=new Set();
+  const airportNames=new Map();
+  for(const [id,a] of Object.entries(ATC_DATA.airports||{})){
+    const name=String((a&&a[2])||"");
+    const uid=id.toUpperCase();
+    const local=(uid.startsWith("K")&&uid.length===4)?uid.slice(1):uid;
+    if(uid.includes(q)||local.includes(q)||name.toUpperCase().includes(q)){
+      airportIds.add(uid);
+      airportIds.add(local);
+      if(uid.length===3) airportIds.add("K"+uid);
+      airportNames.set(uid,name);
+    }
   }
 
-  services.forEach(s=>{
-    if(!Array.isArray(s)) return;
-    let text=s.map(x=>typeof x==="string"?x:"").join(" ").toUpperCase();
-    let apt=String(s[2]||"").toUpperCase();
-    if(text.includes(q)||matchedAirportIds.has(apt)) add(s);
-  });
+  // Match controller/facility text too.
+  const groups=new Map();
+  for(const s of (ATC_DATA.services||[])){
+    if(!Array.isArray(s)) continue;
+    const facility=String(s[0]||"");
+    const label=String(s[1]||facility);
+    const apt=String(s[2]||"").toUpperCase();
+    const text=(facility+" "+label+" "+apt+" "+String(s[6]||"")).toUpperCase();
+    if(!(text.includes(q)||airportIds.has(apt))) continue;
 
-  let results=[...groups.values()];
-  results.forEach(g=>g.freqs.sort((a,b)=>parseFloat(a)-parseFloat(b)));
+    const f=Number(s[5]);
+    if(!Number.isFinite(f)||f<100||f>150) continue;
+    const fr=fmtFreq(f);
+    const key=label||facility||apt;
+    if(!groups.has(key)) groups.set(key,new Set());
+    groups.get(key).add(fr);
+  }
 
-  if(!results.length){
+  // Add the airport's published local/CTAF frequency from packaged data when present.
+  const localFreqs=ATC_DATA.ctaf||ATC_DATA.ctafs||ATC_DATA.airportFreqs||ATC_DATA.airport_freqs||{};
+  for(const id of airportIds){
+    const raw=localFreqs[id] ?? localFreqs[id.replace(/^K/,"")];
+    const f=Number(raw);
+    if(Number.isFinite(f)&&f>=100&&f<=150){
+      const name=airportNames.get(id)||airportNames.get(id.replace(/^K/,""))||id;
+      const key=name+" — LOCAL/CTAF";
+      if(!groups.has(key)) groups.set(key,new Set());
+      groups.get(key).add(fmtFreq(f));
+    }
+  }
+
+  const rows=[...groups.entries()].slice(0,20);
+  if(!rows.length){
     box.innerHTML='<div class="muted">No matching frequencies found in the packaged FAA data.</div>';
     return;
   }
-  box.innerHTML=results.slice(0,12).map(g=>`
+  box.innerHTML=rows.map(([label,freqs])=>`
     <div class="step">
-      <b>${g.label}</b>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:7px">
-        ${g.freqs.map(fr=>`<span style="font-size:19px;font-weight:800;white-space:nowrap">${fr}</span>`).join("")}
+      <b>${label}</b>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:7px">
+        ${[...freqs].sort((a,b)=>parseFloat(a)-parseFloat(b)).map(fr=>`<span style="font-size:20px;font-weight:800;white-space:nowrap">${fr}</span>`).join("")}
       </div>
     </div>`).join("");
 }

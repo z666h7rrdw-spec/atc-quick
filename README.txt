@@ -38,3 +38,5 @@ V15: moves Quick Frequency Search to the home screen so it can be used without e
 V16: Frequency Search is now a separate full-width button directly below the home route-planning card, and remains available during guidance.
 
 V17: fixes Quick Frequency Search live input and airport-data lookup. Search now handles object- or array-shaped airport data and explicitly binds input/keyup events. Supports city/facility/airport identifier matches without changing route state.
+
+V18: Frequency Search now uses an explicit Search button and Enter key instead of iOS live-input events. Lookup reads the actual airports object and services array directly.
