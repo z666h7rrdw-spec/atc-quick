@@ -32,3 +32,5 @@ V12: fixes route-row overlap when facilities have many OTHER frequencies. Main p
 V13: route rows now use a strict CSS grid. OTHER frequencies are isolated in a 44% right column with a divider; each frequency is a nonbreaking token that wraps only between frequencies. This prevents long OTHER lists from overlapping the predicted facility/frequency column.
 
 V14: adds Quick Frequency Search from the active flight screen. Search facility/city/airport/identifier (e.g. Atlanta or KATL) against packaged FAA data without changing the active route or GPS tracking. V13 route layout retained.
+
+V15: moves Quick Frequency Search to the home screen so it can be used without entering a route, while retaining access on the active guidance screen. Search does not alter route or GPS state.
