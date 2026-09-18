@@ -64,7 +64,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:560px;margin:38px auto">
     <div class="tag">QUICK FREQUENCY SEARCH</div>
     <div class="muted" style="margin:5px 0 10px">Search a facility, city, airport name, or identifier. This does not change your route.</div>
-    <input id="freqSearchInput" placeholder="Atlanta, Greensboro, KATL..." autocomplete="off" oninput="runFreqSearch()">
+    <input id="freqSearchInput" placeholder="Atlanta, Greensboro, KATL..." autocomplete="off" oninput="runFreqSearch()" onkeyup="runFreqSearch()">
     <div id="freqSearchResults" style="margin-top:10px"></div>
     <button class="secondary" style="margin-top:12px" onclick="closeFreqSearch()">Close</button>
   </div>
@@ -171,68 +171,82 @@ function fmtFreq(f){return Number(f).toFixed(3).replace(/0+$/,"").replace(/\.$/,
 
 function openFreqSearch(){
   $("freqSearchPanel").classList.remove("hidden");
-  $("freqSearchInput").value="";
-  $("freqSearchResults").innerHTML='<div class="muted">Type a facility or airport to search the packaged FAA data.</div>';
-  setTimeout(()=>$("freqSearchInput").focus(),50);
+  let input=$("freqSearchInput");
+  input.value="";
+  $("freqSearchResults").innerHTML='<div class="muted">Type at least 2 characters.</div>';
+  input.oninput=runFreqSearch;
+  input.onkeyup=runFreqSearch;
+  setTimeout(()=>input.focus(),50);
 }
 function closeFreqSearch(){
   $("freqSearchPanel").classList.add("hidden");
 }
+function airportRows(){
+  let a=ATC_DATA.airports||[];
+  if(Array.isArray(a)) return a;
+  return Object.entries(a).map(([id,v])=>{
+    if(Array.isArray(v)) return [id,...v];
+    if(v && typeof v==="object") return [id,v.name||v.airport_name||v.city||"",v];
+    return [id,String(v||"")];
+  });
+}
+function serviceRows(){
+  let s=ATC_DATA.services||[];
+  return Array.isArray(s)?s:Object.values(s);
+}
 function runFreqSearch(){
-  let q=$("freqSearchInput").value.trim().toUpperCase();
+  let input=$("freqSearchInput");
+  let q=(input.value||"").trim().toUpperCase();
+  let box=$("freqSearchResults");
   if(q.length<2){
-    $("freqSearchResults").innerHTML='<div class="muted">Type at least 2 characters.</div>';
+    box.innerHTML='<div class="muted">Type at least 2 characters.</div>';
     return;
   }
-  let hits=new Map();
 
-  function addHit(key,label,fac){
-    if(!key||!label)return;
-    if(!hits.has(key)) hits.set(key,{key,label,fac,freqs:[]});
-  }
+  let services=serviceRows();
+  let airports=airportRows();
+  let matchedAirportIds=new Set();
 
-  // Match airports by ICAO/local identifier/name, then collect service facilities tied to them.
-  (ATC_DATA.airports||[]).forEach(a=>{
-    let id=(a[0]||"").toUpperCase(), name=(a[1]||"").toUpperCase();
+  airports.forEach(a=>{
+    let id=String(a[0]||"").toUpperCase();
+    let vals=a.map(x=>typeof x==="string"?x:"").join(" ").toUpperCase();
     let local=id.startsWith("K")?id.slice(1):id;
-    if(id.includes(q)||local.includes(q)||name.includes(q)){
-      (ATC_DATA.services||[]).forEach(s=>{
-        if(s[2]===a[0]){
-          let fac=s[0], label=(s[1]||fac||a[1]||a[0]);
-          addHit("F:"+fac,label,fac);
-        }
-      });
-    }
+    if(id.includes(q)||local.includes(q)||vals.includes(q)) matchedAirportIds.add(id);
   });
 
-  // Direct facility/call-name/service-airport matching.
-  (ATC_DATA.services||[]).forEach(s=>{
-    let fac=s[0], label=(s[1]||fac||"");
-    let airport=(s[2]||"");
-    let text=[fac,label,airport,s[6]||""].join(" ").toUpperCase();
-    if(text.includes(q)) addHit("F:"+fac,label,fac);
+  let groups=new Map();
+  function add(s){
+    if(!Array.isArray(s)) return;
+    let fac=String(s[0]||"").trim();
+    let label=String(s[1]||fac||s[2]||"").trim();
+    let apt=String(s[2]||"").trim().toUpperCase();
+    let fr=fmtFreq(s[5]);
+    if(!fr) return;
+    let key=fac||label||apt;
+    if(!groups.has(key)) groups.set(key,{label:label||fac||apt,freqs:[]});
+    let g=groups.get(key);
+    if(!g.freqs.includes(fr)) g.freqs.push(fr);
+  }
+
+  services.forEach(s=>{
+    if(!Array.isArray(s)) return;
+    let text=s.map(x=>typeof x==="string"?x:"").join(" ").toUpperCase();
+    let apt=String(s[2]||"").toUpperCase();
+    if(text.includes(q)||matchedAirportIds.has(apt)) add(s);
   });
 
-  // Populate all known frequencies for each matched facility.
-  hits.forEach(h=>{
-    (ATC_DATA.services||[]).filter(s=>s[0]===h.fac).forEach(s=>{
-      let fr=fmtFreq(s[5]);
-      let note=[s[2],s[6]].filter(Boolean).join(" · ");
-      if(fr && !h.freqs.some(x=>x.fr===fr)) h.freqs.push({fr,note});
-    });
-    h.freqs.sort((a,b)=>parseFloat(a.fr)-parseFloat(b.fr));
-  });
+  let results=[...groups.values()];
+  results.forEach(g=>g.freqs.sort((a,b)=>parseFloat(a)-parseFloat(b)));
 
-  let arr=[...hits.values()].filter(h=>h.freqs.length).slice(0,12);
-  if(!arr.length){
-    $("freqSearchResults").innerHTML='<div class="muted">No matching facility frequencies found in the packaged data.</div>';
+  if(!results.length){
+    box.innerHTML='<div class="muted">No matching frequencies found in the packaged FAA data.</div>';
     return;
   }
-  $("freqSearchResults").innerHTML=arr.map(h=>`
+  box.innerHTML=results.slice(0,12).map(g=>`
     <div class="step">
-      <b>${h.label}</b>
-      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:7px">
-        ${h.freqs.map(x=>`<span style="font-size:18px;font-weight:800;white-space:nowrap">${x.fr}</span>`).join("")}
+      <b>${g.label}</b>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:7px">
+        ${g.freqs.map(fr=>`<span style="font-size:19px;font-weight:800;white-space:nowrap">${fr}</span>`).join("")}
       </div>
     </div>`).join("");
 }
