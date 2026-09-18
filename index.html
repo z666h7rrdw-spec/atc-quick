@@ -190,15 +190,20 @@ function runFreqSearch(){
   // Resolve airport matches directly from the actual ATC_DATA.airports object.
   const airportIds=new Set();
   const airportNames=new Map();
+  const qLocal=(q.startsWith("K")&&q.length===4)?q.slice(1):q;
   for(const [id,a] of Object.entries(ATC_DATA.airports||{})){
     const name=String((a&&a[2])||"");
-    const uid=id.toUpperCase();
+    const uid=String(id||"").toUpperCase();
     const local=(uid.startsWith("K")&&uid.length===4)?uid.slice(1):uid;
-    if(uid.includes(q)||local.includes(q)||name.toUpperCase().includes(q)){
+    const icao=(local.length===3)?"K"+local:uid;
+    const identMatch=(q===uid || q===local || q===icao || qLocal===local);
+    if(identMatch || name.toUpperCase().includes(q)){
       airportIds.add(uid);
       airportIds.add(local);
-      if(uid.length===3) airportIds.add("K"+uid);
+      airportIds.add(icao);
       airportNames.set(uid,name);
+      airportNames.set(local,name);
+      airportNames.set(icao,name);
     }
   }
 
@@ -209,8 +214,10 @@ function runFreqSearch(){
     const facility=String(s[0]||"");
     const label=String(s[1]||facility);
     const apt=String(s[2]||"").toUpperCase();
+    const aptLocal=(apt.startsWith("K")&&apt.length===4)?apt.slice(1):apt;
+    const aptIcao=(aptLocal.length===3)?"K"+aptLocal:apt;
     const text=(facility+" "+label+" "+apt+" "+String(s[6]||"")).toUpperCase();
-    if(!(text.includes(q)||airportIds.has(apt))) continue;
+    if(!(text.includes(q)||airportIds.has(apt)||airportIds.has(aptLocal)||airportIds.has(aptIcao))) continue;
 
     const f=Number(s[5]);
     if(!Number.isFinite(f)||f<100||f>150) continue;

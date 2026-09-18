@@ -40,3 +40,5 @@ V16: Frequency Search is now a separate full-width button directly below the hom
 V17: fixes Quick Frequency Search live input and airport-data lookup. Search now handles object- or array-shaped airport data and explicitly binds input/keyup events. Supports city/facility/airport identifier matches without changing route state.
 
 V18: Frequency Search now uses an explicit Search button and Enter key instead of iOS live-input events. Lookup reads the actual airports object and services array directly.
+
+V19: preserves the working v18 Frequency Search UI and adds domestic/ICAO airport identifier normalization, e.g. ATL/KATL and GSO/KGSO.
