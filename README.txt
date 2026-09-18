@@ -34,3 +34,5 @@ V13: route rows now use a strict CSS grid. OTHER frequencies are isolated in a 4
 V14: adds Quick Frequency Search from the active flight screen. Search facility/city/airport/identifier (e.g. Atlanta or KATL) against packaged FAA data without changing the active route or GPS tracking. V13 route layout retained.
 
 V15: moves Quick Frequency Search to the home screen so it can be used without entering a route, while retaining access on the active guidance screen. Search does not alter route or GPS state.
+
+V16: Frequency Search is now a separate full-width button directly below the home route-planning card, and remains available during guidance.

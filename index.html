@@ -26,9 +26,10 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 <div><label>DESTINATION</label><input id="dest" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('dest')"></div><div id="destResults" class="searchResults full"></div>
 <div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" autocomplete="off" autocapitalize="characters" oninput="showFixResults()"></div><div id="fixResults" class="searchResults full"></div>
 <div><label>CRUISE ALTITUDE</label><input id="alt" value="" inputmode="numeric"></div>
-<div><label>&nbsp;</label><button class="secondary" onclick="openFreqSearch()">Frequency Search</button>
+<div><label>&nbsp;</label>
 <button onclick="buildRoute()">Get ATC Guidance</button></div>
 </div></div>
+<button onclick="openFreqSearch()" style="width:100%;margin:14px 0 18px;padding:16px;font-size:18px;font-weight:800">🔎 Frequency Search</button>
 
 <div id="flight" class="hidden">
 <div class="card next">
@@ -37,8 +38,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div id="nextFreq" class="big">—</div>
   <div id="gps" class="gps">Guidance loaded · GPS not started</div>
 </div>
-
-<button class="secondary" style="margin-bottom:10px" onclick="openFreqSearch()">Frequency Search</button>
+<button class="secondary" onclick="openFreqSearch()" style="width:100%;margin-bottom:10px">🔎 Frequency Search</button>
 <div class="card">
   <div class="tag">PREDICTED ROUTE</div>
   <div id="sequence"></div>
