@@ -73,3 +73,5 @@ V46: Runway Wind results automatically sort the best headwind runway to the top 
 V47: Best-wind runway selection is now explicit before rendering; strongest headwind is forced into the first row and labeled BEST WIND.
 
 V48: Departure/destination Approach and Departure frequency rows now show packaged directional sector degree ranges and a simple compass direction when available.
+
+V49: Sector ranges on Approach/Departure airport-card rows made explicit and high-visibility (SECTOR degrees + compass). Cache advanced to v49.

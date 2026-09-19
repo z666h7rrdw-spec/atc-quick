@@ -100,7 +100,8 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js"></script><script>
+</main><script src="data.js"></script><!-- ATC Quick V49 -->
+<script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
 let AIRPORT_QUICK_DATA=[];
@@ -127,7 +128,7 @@ function directionalServiceNote(a,label,freq){
     let m=String(s[6]||"").match(/(?:^|\s)(\d{3})\s*-\s*(\d{3})(?:\s|$)/);
     if(m){
       let c=compassForSector(m[1],m[2]);
-      return `${m[1]}°–${m[2]}°${c?` · ${c}`:""}`;
+      return `SECTOR ${m[1]}°–${m[2]}°${c?` · ${c}`:""}`;
     }
   }
   return "";
@@ -138,7 +139,7 @@ function airportCardHTML(a,title,rowsOverride){
       let rows=source.map(x=>{
         let note=directionalServiceNote(a,x[0],x[1]);
         return `<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-          <div style="min-width:0"><b>${x[0]}</b>${note?`<div class="muted" style="font-size:12px;margin-top:3px;white-space:nowrap">${note}</div>`:""}</div>
+          <div style="min-width:0"><b>${x[0]}</b>${note?`<div class="muted" style="font-size:14px;margin-top:4px;white-space:nowrap;font-weight:700;color:#8fb4d9">${note}</div>`:""}</div>
           <span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
         </div>`;
       }).join("");
