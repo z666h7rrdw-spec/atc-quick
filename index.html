@@ -33,12 +33,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 
 <div id="flight" class="hidden">
 <div id="departureAirportCard" class="card" style="display:none"></div>
-<div class="card next">
-  <div class="tag">LIKELY NEXT</div>
-  <div id="nextCall" class="call">—</div>
-  <div id="nextFreq" class="big">—</div>
-  <div id="gps" class="gps">Guidance loaded · GPS not started</div>
-</div>
+<div id="gps" class="gps" style="display:none">Guidance loaded · GPS not started</div>
 
 <div class="card">
   <div class="tag">PREDICTED ROUTE</div>
@@ -57,7 +52,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V34 · FLIGHT TEST LOG</div>
+  <div class="tag">V35 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -138,16 +133,6 @@ function uniqueRows(rows){
         });
       }
 
-      if(idx===0 && seqEl){
-        let firstRemaining=seqEl.querySelector(".step");
-        if(firstRemaining){
-          let name=firstRemaining.querySelector("b"),freq=firstRemaining.querySelector(".big");
-          if(name&&freq){
-            $("nextCall").textContent=name.textContent.trim();
-            $("nextFreq").textContent=freq.textContent.trim();
-          }
-        }
-      }
     }
 
     function renderAirportCards(){
@@ -370,8 +355,6 @@ function runFreqSearch(){
 function render(){
  if(!seq.length)return;
  let n=seq[Math.min(idx,seq.length-1)];
- $("nextCall").textContent=n.call;
- $("nextFreq").textContent=fmtFreq(n.freq);
 
  function knownOtherFreqs(s, primaryFreqs){
    if(!s.facility) return [];
@@ -405,11 +388,7 @@ function render(){
    if(/CTAF|TOWER/.test(call) && (call.includes(destId)||call.includes(destShort)))return false;
    return true;
  });
- // At initial guidance, LIKELY NEXT means the handoff after the departure controller.
- if(idx===0 && routeGroups.length){
-   $("nextCall").textContent=routeGroups[0].call;
-   $("nextFreq").textContent=routeGroups[0].freqs.map(fmtFreq).join(" / ");
- } routeGroups=routeGroups.filter(g=>!/CTAF|TOWER/i.test(String(g.call||"")));
+ routeGroups=routeGroups.filter(g=>!/CTAF|TOWER/i.test(String(g.call||"")));
  $("sequence").innerHTML=routeGroups.map(g=>{
    let state=g.end<idx?"PASSED":(idx>=g.start&&idx<=g.end)?"LIKELY NEXT":"AFTER";
    let other=knownOtherFreqs(g,g.freqs);

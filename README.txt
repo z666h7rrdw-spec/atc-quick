@@ -59,4 +59,4 @@ V31 hard-layout rules: non-towered departure card owns first predicted controlle
 
 V33 AUDITED: rebuilt from V31. Added missing uniqueRows helper and display-only corrections. Prediction/search/GPS engine unchanged.
 
-V34: removed only the redundant second Frequency Search button below LIKELY NEXT. All V33 route, airport-card, search, GPS, and prediction behavior preserved.
+V35: removed only the redundant second Frequency Search button below LIKELY NEXT. All V33 route, airport-card, search, GPS, and prediction behavior preserved.
