@@ -66,4 +66,4 @@ V36: Removed legacy LIKELY NEXT card display and changed service worker navigati
 V42: V40-style destination simplified to one Runway Wind button; dedicated overlay shows all runway wind components.
 
 
-V43: Keeps V42 destination Runway Wind button; calculator now uses Airport Quick-style light all-runway visual display with runway graphics and wind arrows.
+V44: Keeps V42 destination Runway Wind button; calculator now uses Airport Quick-style light all-runway visual display with runway graphics and wind arrows.

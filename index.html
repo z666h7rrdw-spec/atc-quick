@@ -18,7 +18,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 .searchItem:last-child{border-bottom:0}
 .searchItem b{display:block}.searchItem span{font-size:12px;color:#91a7bd}
 
-/* V43 Airport Quick-style runway wind panel */
+/* V44 Airport Quick-style runway wind panel */
 #runwayWindPanel{background:#f4f7fb!important;color:#0b1b33!important;padding:18px!important}
 #runwayWindPanel .rw-light{max-width:560px;margin:22px auto;background:#fff;border:1px solid #dce5ef;border-radius:24px;padding:20px;box-shadow:0 10px 30px rgba(11,27,51,.12)}
 #runwayWindPanel .rw-title{font-size:25px;font-weight:900;color:#0b1b33}
@@ -128,8 +128,18 @@ function destinationCardHTML(a,rows){
 function runwayEnds(a){
   let out=[];
   for(const r of (a&&a.runways)||[]){
-    let ends=String(r[0]||"").split("/");
-    let h1=Number(r[4]), h2=Number(r[5]);
+    // airports.json uses object runway records with an ends[] array.
+    if(r && !Array.isArray(r) && Array.isArray(r.ends)){
+      for(const e of r.ends){
+        let id=String((e&&e.id)||"").trim();
+        let heading=Number(e&&e.heading);
+        if(id && Number.isFinite(heading))out.push({rwy:id,heading});
+      }
+      continue;
+    }
+    // Retain compatibility with the older array-form runway records.
+    let ends=String((r&&r[0])||"").split("/");
+    let h1=Number(r&&r[4]), h2=Number(r&&r[5]);
     if(ends[0] && Number.isFinite(h1))out.push({rwy:ends[0],heading:h1});
     if(ends[1] && Number.isFinite(h2))out.push({rwy:ends[1],heading:h2});
   }
