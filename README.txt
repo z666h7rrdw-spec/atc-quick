@@ -61,4 +61,6 @@ V33 AUDITED: rebuilt from V31. Added missing uniqueRows helper and display-only 
 
 V35: removed only the redundant second Frequency Search button below LIKELY NEXT. All V33 route, airport-card, search, GPS, and prediction behavior preserved.
 
-V36: Removed legacy LIKELY NEXT card display and changed service worker navigation to network-first with old-cache cleanup.
+V37: Removed legacy LIKELY NEXT card display and changed service worker navigation to network-first with old-cache cleanup.
+
+V37: Destination card adds runway details plus manual wind direction/speed with automatic runway wind components. ATC prediction engine preserved from V36 base.

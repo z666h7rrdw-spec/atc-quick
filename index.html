@@ -17,6 +17,8 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 .searchItem{padding:11px;border-bottom:1px solid #203247;cursor:pointer}
 .searchItem:last-child{border-bottom:0}
 .searchItem b{display:block}.searchItem span{font-size:12px;color:#91a7bd}
+
+.destRunway{padding:10px 0;border-bottom:1px solid #23384d}.destRunway:last-child{border-bottom:0}.destRunwayTop{display:flex;justify-content:space-between;gap:10px;align-items:center}.destRunwayName{font-size:18px;font-weight:800}.destRunwayMeta{font-size:13px;color:#9bb0c5;margin-top:3px}.windBox{margin-top:14px;padding-top:12px;border-top:1px solid #23384d}.windInputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.windInputs input{width:100%;font-size:18px;padding:11px 12px}.windResults{margin-top:10px}.windResult{padding:10px 0;border-bottom:1px solid #23384d}.windResult:last-child{border-bottom:0}.bestRwy{font-weight:900}.windGood{font-size:13px;color:#75d69c;margin-top:2px}.windMuted{font-size:13px;color:#9bb0c5;margin-top:2px}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
 <div class="top"><div><div class="tag">FLIGHT-TEST BUILD</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
@@ -52,7 +54,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V36 · FLIGHT TEST LOG</div>
+  <div class="tag">V37 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -135,6 +137,27 @@ function uniqueRows(rows){
 
     }
 
+    function destinationCardHTML(a,rows){
+      if(!a)return "";
+      let fq=(rows||[]).map(x=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>${x[0]}</b><span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span></div>`).join("");
+      let rw=(a.runways||[]).map(r=>`<div class="destRunway"><div class="destRunwayTop"><div class="destRunwayName">RWY ${r.id}</div><b>${r.length?Number(r.length).toLocaleString()+" ft":""}</b></div><div class="destRunwayMeta">${(r.ends||[]).map(e=>`${e.id} ${e.traffic||""} traffic`).join(" · ")}</div></div>`).join("");
+      return `<div class="tag">DESTINATION — ${a.id}</div><div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${fq}<div class="tag" style="margin-top:16px">RUNWAYS</div>${rw}<div class="windBox"><div class="tag">MANUAL WIND</div><div class="windInputs"><input id="destWindDir" type="number" inputmode="numeric" min="0" max="360" placeholder="Wind °"><input id="destWindSpeed" type="number" inputmode="decimal" min="0" placeholder="Knots"></div><div id="destWindResults" class="windResults"><div class="windMuted">Enter wind direction and speed.</div></div></div>`;
+    }
+    function calcDestinationWind(){
+      let dEl=document.getElementById("destWindDir"),sEl=document.getElementById("destWindSpeed"),out=document.getElementById("destWindResults");
+      if(!dEl||!sEl||!out)return;
+      let d=parseFloat(dEl.value),spd=parseFloat(sEl.value),a=aqAirport($("dest").value);
+      if(!a||!Number.isFinite(d)||!Number.isFinite(spd)||d<0||d>360||spd<0){out.innerHTML='<div class="windMuted">Enter wind direction (0–360°) and speed.</div>';return}
+      let vals=[];
+      (a.runways||[]).forEach(r=>(r.ends||[]).forEach(e=>{
+        let h=Number(e.heading);if(!Number.isFinite(h)){let n=parseInt(e.id,10);h=n===36?360:n*10}
+        let rad=(d-h)*Math.PI/180,head=spd*Math.cos(rad),cross=spd*Math.sin(rad);
+        vals.push({id:e.id,head,cross,score:head-Math.abs(cross)*0.02});
+      }));
+      if(!vals.length){out.innerHTML='<div class="windMuted">No runway data available.</div>';return}
+      let best=vals.reduce((a,b)=>b.score>a.score?b:a,vals[0]);
+      out.innerHTML=vals.map(v=>{let along=v.head>=0?`Headwind ${Math.abs(v.head).toFixed(1)} kt`:`Tailwind ${Math.abs(v.head).toFixed(1)} kt`;let side=Math.abs(v.cross)<0.05?'No crosswind':`Crosswind ${Math.abs(v.cross).toFixed(1)} kt from ${v.cross>0?'right':'left'}`;return `<div class="windResult ${v===best?'bestRwy':''}"><div>RWY ${v.id}${v===best?' — BEST WIND':''}</div><div class="${v===best?'windGood':'windMuted'}">${along} · ${side}</div></div>`}).join("");
+    }
     function renderAirportCards(){
   let dep=document.getElementById("departureAirportCard"),dst=document.getElementById("destinationAirportCard");
   let o=document.getElementById("origin"),d=document.getElementById("dest");
@@ -160,7 +183,9 @@ function uniqueRows(rows){
     let towered=(b.freqs||[]).some(x=>/TOWER/i.test(String(x[0])));
     let keep=towered?/^(ATIS|AWOS|ASOS|APPROACH|TOWER|GROUND)$/i:/^(AWOS|ASOS|ATIS|CTAF|UNICOM)$/i;
     let rows=(b.freqs||[]).filter(x=>keep.test(String(x[0]).trim()));
-    dst.innerHTML=airportCardHTML(b,"DESTINATION",uniqueRows(rows));
+    dst.innerHTML=destinationCardHTML(b,uniqueRows(rows));
+    let wd=document.getElementById("destWindDir"),ws=document.getElementById("destWindSpeed");
+    if(wd&&ws){wd.addEventListener("input",calcDestinationWind);ws.addEventListener("input",calcDestinationWind)}
   }
 }
 
