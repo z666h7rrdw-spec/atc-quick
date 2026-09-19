@@ -63,5 +63,4 @@ V35: removed only the redundant second Frequency Search button below LIKELY NEXT
 
 V36: Removed legacy LIKELY NEXT card display and changed service worker navigation to network-first with old-cache cleanup.
 
-
-V38: Built directly from V36 base. Destination card now appends runway data and manual wind/headwind/crosswind calculator. ATC prediction engine unchanged.
+V40: Destination card includes runway data and manual wind/headwind/crosswind calculator. Built directly from V36 base.

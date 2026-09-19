@@ -84,9 +84,44 @@ function airportCardHTML(a,title,rowsOverride){
       let rows=source.map(x=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
         <b>${x[0]}</b><span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
       </div>`).join("");
+      let landing = title === "DESTINATION" ? destinationLandingHTML(a) : "";
       return `<div class="tag">${title} — ${a.id}</div>
-        <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${rows}`;
+        <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${rows}${landing}`;
     }
+function destinationLandingHTML(a){
+  let runways=Array.isArray(a.runways)?a.runways:[];
+  if(!runways.length)return "";
+  let runwayRows=runways.map(r=>{
+    let ends=(r.ends||[]).map(e=>`RWY ${e.id} · ${Math.round(Number(e.heading)||0).toString().padStart(3,"0")}° · ${e.traffic||""} traffic`).join("<br>");
+    return `<div class="step"><b>${r.id}</b> <span class="muted">${Number(r.length||0).toLocaleString()} × ${r.width||"?"} ft · ${r.surface||""}</span><div class="muted" style="margin-top:4px">${ends}</div></div>`;
+  }).join("");
+  return `<div style="border-top:1px solid rgba(140,170,200,.22);margin-top:12px;padding-top:12px">
+    <div class="tag">RUNWAYS</div>${runwayRows}
+    <div class="tag" style="margin-top:14px">MANUAL WIND</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+      <label>Direction °<input id="landingWindDir" type="number" inputmode="numeric" min="0" max="360" placeholder="240" oninput="calcLandingWind()"></label>
+      <label>Speed kt<input id="landingWindSpeed" type="number" inputmode="decimal" min="0" placeholder="12" oninput="calcLandingWind()"></label>
+    </div>
+    <div id="landingWindResult" class="step" style="margin-top:10px"><span class="muted">Enter wind direction and speed.</span></div>
+  </div>`;
+}
+function calcLandingWind(){
+  let d=Number(document.getElementById("landingWindDir")?.value), sp=Number(document.getElementById("landingWindSpeed")?.value);
+  let out=document.getElementById("landingWindResult"); if(!out)return;
+  let a=aqAirport(document.getElementById("dest")?.value); if(!a||!d||sp<0||!Number.isFinite(sp)){out.innerHTML='<span class="muted">Enter wind direction and speed.</span>';return;}
+  if(d===360)d=0;
+  let opts=[];
+  (a.runways||[]).forEach(r=>(r.ends||[]).forEach(e=>{
+    let delta=((d-Number(e.heading)+540)%360)-180;
+    let head=sp*Math.cos(rad(delta)), cross=sp*Math.sin(rad(delta));
+    opts.push({id:e.id,head,cross});
+  }));
+  opts.sort((x,y)=>y.head-x.head || Math.abs(x.cross)-Math.abs(y.cross));
+  let b=opts[0]; if(!b){out.innerHTML='<span class="muted">No runway data.</span>';return;}
+  let h=b.head>=0?`${Math.abs(b.head).toFixed(1)} kt headwind`:`${Math.abs(b.head).toFixed(1)} kt tailwind`;
+  let c=Math.abs(b.cross)<0.05?"0.0 kt crosswind":`${Math.abs(b.cross).toFixed(1)} kt crosswind from ${b.cross>0?"right":"left"}`;
+  out.innerHTML=`<div class="tag">BEST WIND</div><div class="big" style="font-size:26px">RWY ${b.id}</div><div style="margin-top:5px"><b>${h}</b><br>${c}</div>`;
+}
 function uniqueRows(rows){
       let seen=new Set();
       return (rows||[]).filter(x=>{
@@ -95,41 +130,6 @@ function uniqueRows(rows){
         seen.add(k);return true;
       });
     }
-function destinationLandingHTML(a){
-  if(!a || !Array.isArray(a.runways) || !a.runways.length)return "";
-  let rw=a.runways.map(r=>{
-    let traffic=(r.ends||[]).map(e=>`${e.id} ${e.traffic||""}`.trim()).join(" · ");
-    return `<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Runway ${r.id}</b><span style="font-weight:800;white-space:nowrap">${r.length?Number(r.length).toLocaleString()+" ft":""}</span></div>${traffic?`<div class="muted" style="font-size:12px;margin:-6px 0 8px 2px">Traffic: ${traffic}</div>`:""}`;
-  }).join("");
-  return `<div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(140,170,200,.22)">
-    <div class="tag">RUNWAYS + MANUAL WIND</div>${rw}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-      <input id="destWindDir" type="number" inputmode="numeric" min="0" max="360" placeholder="Wind °" oninput="calcDestWind()">
-      <input id="destWindSpeed" type="number" inputmode="decimal" min="0" placeholder="Knots" oninput="calcDestWind()">
-    </div>
-    <div id="destWindResult" style="margin-top:12px"></div>
-  </div>`;
-}
-function calcDestWind(){
-  let a=aqAirport($("dest").value), out=$("destWindResult");
-  if(!a||!out)return;
-  let d=Number($("destWindDir")?.value),s=Number($("destWindSpeed")?.value);
-  if(!Number.isFinite(d)||!Number.isFinite(s)||d<0||d>360||s<0){out.innerHTML='<div class="muted">Enter wind direction (0–360°) and speed.</div>';return}
-  let lines=[];
-  (a.runways||[]).forEach(r=>(r.ends||[]).forEach(e=>{
-    let h=Number(e.heading); if(!Number.isFinite(h)){let n=parseInt(e.id,10);h=n===36?360:n*10}
-    let rad=(d-h)*Math.PI/180, head=s*Math.cos(rad), cross=s*Math.sin(rad);
-    lines.push({id:e.id,head,cross,score:head});
-  }));
-  if(!lines.length){out.innerHTML='<div class="muted">No runway headings available.</div>';return}
-  let best=lines.reduce((a,b)=>b.score>a.score?b:a);
-  out.innerHTML=lines.map(x=>{
-    let along=x.head>=0?`Headwind ${Math.abs(x.head).toFixed(1)} kt`:`Tailwind ${Math.abs(x.head).toFixed(1)} kt`;
-    let side=Math.abs(x.cross)<0.05?'No crosswind':`Crosswind ${Math.abs(x.cross).toFixed(1)} kt from ${x.cross>0?'right':'left'}`;
-    let bestTag=x===best?'<span class="pill" style="margin-right:7px">BEST WIND</span>':'';
-    return `<div class="step">${bestTag}<b>RWY ${x.id}</b><div style="margin-top:4px;font-size:15px">${along} · ${side}</div></div>`;
-  }).join('');
-}
     function v33DisplayFix(){
       let dep=document.getElementById("departureAirportCard");
       let dst=document.getElementById("destinationAirportCard");
@@ -157,7 +157,7 @@ function calcDestWind(){
         let towered=all.some(x=>/^TOWER$/i.test(String(x[0]).trim()));
         let keep=towered?/^(ATIS|AWOS|ASOS|APPROACH|TOWER|GROUND)$/i:/^(AWOS|ASOS|ATIS|CTAF|UNICOM)$/i;
         let rows=uniqueRows(all.filter(x=>keep.test(String(x[0]).trim())));
-        dst.innerHTML=airportCardHTML(b,"DESTINATION",rows)+destinationLandingHTML(b);
+        dst.innerHTML=airportCardHTML(b,"DESTINATION",rows);
         dst.style.display="block";
       }
 
@@ -195,7 +195,7 @@ function calcDestWind(){
     let towered=(b.freqs||[]).some(x=>/TOWER/i.test(String(x[0])));
     let keep=towered?/^(ATIS|AWOS|ASOS|APPROACH|TOWER|GROUND)$/i:/^(AWOS|ASOS|ATIS|CTAF|UNICOM)$/i;
     let rows=(b.freqs||[]).filter(x=>keep.test(String(x[0]).trim()));
-    dst.innerHTML=airportCardHTML(b,"DESTINATION",uniqueRows(rows))+destinationLandingHTML(b);
+    dst.innerHTML=airportCardHTML(b,"DESTINATION",uniqueRows(rows));
   }
 }
 
