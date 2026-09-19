@@ -69,3 +69,5 @@ V42: V40-style destination simplified to one Runway Wind button; dedicated overl
 V45: Keeps V44 layout and button; runway calculator now uses the exact V40 a.runways[].ends[] extraction path and captures the active destination airport when opened.
 
 V46: Runway Wind results automatically sort the best headwind runway to the top and label it BEST WIND; all V45 runway graphics/calculations remain unchanged.
+
+V47: Best-wind runway selection is now explicit before rendering; strongest headwind is forced into the first row and labeled BEST WIND.

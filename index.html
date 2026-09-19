@@ -187,9 +187,19 @@ function calcRunwayWind(){
     vals.push({rwy:id,heading,head:ws*Math.cos(rr),cross:ws*Math.sin(rr)});
   }));
   if(!vals.length){$("rwResults").innerHTML='<div class="rw-empty">No runway heading data available.</div>';return;}
-  // Put the runway with the strongest headwind component first. If two are
-  // effectively tied, prefer the one with the smaller crosswind component.
-  vals.sort((a,b)=>(b.head-a.head) || (Math.abs(a.cross)-Math.abs(b.cross)));
+  // V47: explicitly select the strongest headwind runway first, then order
+  // the remaining runway ends by headwind component. This avoids relying on
+  // the source/database runway order.
+  let bestIndex=0;
+  for(let i=1;i<vals.length;i++){
+    if(vals[i].head > vals[bestIndex].head + 0.000001 ||
+      (Math.abs(vals[i].head-vals[bestIndex].head)<=0.000001 && Math.abs(vals[i].cross)<Math.abs(vals[bestIndex].cross))){
+      bestIndex=i;
+    }
+  }
+  let bestVal=vals[bestIndex];
+  let rest=vals.filter((_,i)=>i!==bestIndex).sort((a,b)=>(b.head-a.head) || (Math.abs(a.cross)-Math.abs(b.cross)));
+  vals=[bestVal,...rest];
   $("rwResults").innerHTML=vals.map((v,i)=>{
     let along=v.head>=0?`Headwind ${Math.abs(v.head).toFixed(1)} kt`:`Tailwind ${Math.abs(v.head).toFixed(1)} kt`;
     let side=Math.abs(v.cross)<0.05?'Crosswind 0.0 kt':`Crosswind ${Math.abs(v.cross).toFixed(1)} kt from ${v.cross>0?'RIGHT':'LEFT'}`;
