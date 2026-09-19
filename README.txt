@@ -64,3 +64,5 @@ V35: removed only the redundant second Frequency Search button below LIKELY NEXT
 V36: Removed legacy LIKELY NEXT card display and changed service worker navigation to network-first with old-cache cleanup.
 
 V40: Destination card includes runway data and manual wind/headwind/crosswind calculator. Built directly from V36 base.
+
+V41: Destination Runway Wind button opens a dedicated calculator panel; all runway-end wind components are shown and best wind is highlighted.

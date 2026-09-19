@@ -91,24 +91,37 @@ function airportCardHTML(a,title,rowsOverride){
 function destinationLandingHTML(a){
   let runways=Array.isArray(a.runways)?a.runways:[];
   if(!runways.length)return "";
+  return `<div style="border-top:1px solid rgba(140,170,200,.22);margin-top:12px;padding-top:14px">
+    <button type="button" onclick="openRunwayWind()" style="width:100%;border:0;border-radius:16px;padding:16px 14px;background:#2382df;color:white;font-size:20px;font-weight:800">Runway Wind</button>
+  </div>`;
+}
+function openRunwayWind(){
+  let a=aqAirport(document.getElementById("dest")?.value); if(!a)return;
+  let runways=Array.isArray(a.runways)?a.runways:[];
   let runwayRows=runways.map(r=>{
     let ends=(r.ends||[]).map(e=>`RWY ${e.id} · ${Math.round(Number(e.heading)||0).toString().padStart(3,"0")}° · ${e.traffic||""} traffic`).join("<br>");
     return `<div class="step"><b>${r.id}</b> <span class="muted">${Number(r.length||0).toLocaleString()} × ${r.width||"?"} ft · ${r.surface||""}</span><div class="muted" style="margin-top:4px">${ends}</div></div>`;
   }).join("");
-  return `<div style="border-top:1px solid rgba(140,170,200,.22);margin-top:12px;padding-top:12px">
-    <div class="tag">RUNWAYS</div>${runwayRows}
-    <div class="tag" style="margin-top:14px">MANUAL WIND</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
-      <label>Direction °<input id="landingWindDir" type="number" inputmode="numeric" min="0" max="360" placeholder="240" oninput="calcLandingWind()"></label>
-      <label>Speed kt<input id="landingWindSpeed" type="number" inputmode="decimal" min="0" placeholder="12" oninput="calcLandingWind()"></label>
-    </div>
-    <div id="landingWindResult" class="step" style="margin-top:10px"><span class="muted">Enter wind direction and speed.</span></div>
-  </div>`;
+  let old=document.getElementById("runwayWindOverlay"); if(old)old.remove();
+  let box=document.createElement("div"); box.id="runwayWindOverlay";
+  box.style.cssText="position:fixed;inset:0;z-index:9999;background:#071523;overflow:auto;padding:18px 16px 36px;color:#eef7ff";
+  box.innerHTML=`<div style="max-width:720px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px"><div><div class="tag">${a.id}</div><div style="font-size:25px;font-weight:800">Runway Wind</div></div><button type="button" onclick="closeRunwayWind()" style="border:1px solid #36546d;background:#10263a;color:white;border-radius:14px;padding:10px 14px;font-size:18px;font-weight:800">Done</button></div>
+    <div class="card" style="display:block"><div class="tag">RUNWAYS</div>${runwayRows}
+      <div class="tag" style="margin-top:14px">MANUAL WIND</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <label>Direction °<input id="landingWindDir" type="number" inputmode="numeric" min="0" max="360" placeholder="240" oninput="calcLandingWind()"></label>
+        <label>Speed kt<input id="landingWindSpeed" type="number" inputmode="decimal" min="0" placeholder="12" oninput="calcLandingWind()"></label>
+      </div>
+      <div id="landingWindResult" style="margin-top:12px"><span class="muted">Enter wind direction and speed.</span></div>
+    </div></div>`;
+  document.body.appendChild(box); document.body.style.overflow="hidden";
 }
+function closeRunwayWind(){let x=document.getElementById("runwayWindOverlay");if(x)x.remove();document.body.style.overflow="";}
 function calcLandingWind(){
   let d=Number(document.getElementById("landingWindDir")?.value), sp=Number(document.getElementById("landingWindSpeed")?.value);
   let out=document.getElementById("landingWindResult"); if(!out)return;
-  let a=aqAirport(document.getElementById("dest")?.value); if(!a||!d||sp<0||!Number.isFinite(sp)){out.innerHTML='<span class="muted">Enter wind direction and speed.</span>';return;}
+  let a=aqAirport(document.getElementById("dest")?.value); if(!a||!Number.isFinite(d)||d<0||d>360||!Number.isFinite(sp)||sp<0||document.getElementById("landingWindDir")?.value===""||document.getElementById("landingWindSpeed")?.value===""){out.innerHTML='<span class="muted">Enter wind direction and speed.</span>';return;}
   if(d===360)d=0;
   let opts=[];
   (a.runways||[]).forEach(r=>(r.ends||[]).forEach(e=>{
@@ -117,10 +130,13 @@ function calcLandingWind(){
     opts.push({id:e.id,head,cross});
   }));
   opts.sort((x,y)=>y.head-x.head || Math.abs(x.cross)-Math.abs(y.cross));
-  let b=opts[0]; if(!b){out.innerHTML='<span class="muted">No runway data.</span>';return;}
-  let h=b.head>=0?`${Math.abs(b.head).toFixed(1)} kt headwind`:`${Math.abs(b.head).toFixed(1)} kt tailwind`;
-  let c=Math.abs(b.cross)<0.05?"0.0 kt crosswind":`${Math.abs(b.cross).toFixed(1)} kt crosswind from ${b.cross>0?"right":"left"}`;
-  out.innerHTML=`<div class="tag">BEST WIND</div><div class="big" style="font-size:26px">RWY ${b.id}</div><div style="margin-top:5px"><b>${h}</b><br>${c}</div>`;
+  if(!opts.length){out.innerHTML='<span class="muted">No runway data.</span>';return;}
+  let rows=opts.map((o,i)=>{
+    let h=o.head>=0?`${Math.abs(o.head).toFixed(1)} kt headwind`:`${Math.abs(o.head).toFixed(1)} kt tailwind`;
+    let c=Math.abs(o.cross)<0.05?"0.0 kt crosswind":`${Math.abs(o.cross).toFixed(1)} kt crosswind from ${o.cross>0?"right":"left"}`;
+    return `<div class="step" style="${i===0?'border:2px solid #2382df;border-radius:14px;padding:12px;':''}"><div class="tag">${i===0?'BEST WIND · ':''}RWY ${o.id}</div><div style="font-size:18px;margin-top:4px"><b>${h}</b><br>${c}</div></div>`;
+  }).join("");
+  out.innerHTML=rows;
 }
 function uniqueRows(rows){
       let seen=new Set();
