@@ -48,3 +48,5 @@ V20: preserves v19 identifier matching and Search button, and restores automatic
 V21: airport identifiers now autocomplete from 3 characters (KGS -> KGSO/Greensboro, KAT -> KATL/Atlanta) and unrelated facility substring results are suppressed while entering identifiers.
 
 V27: integrates Airport Quick USA airport-frequency database. Shows full departure frequencies, removes the duplicate current controller from Predicted Route, and shows full destination frequencies. ATC prediction engine/search/GPS remain v21-based.
+
+V28: streamlined destination to arrival-use frequencies; removed destination CTAF duplicate from predicted route; non-towered departure card adds first predicted ATC controller/frequency (e.g. KHBI -> Greensboro).
