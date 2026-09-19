@@ -79,4 +79,4 @@ V49: Sector ranges on Approach/Departure airport-card rows made explicit and hig
 V50: altitude-aware ATC prediction. Models climb/cruise/descent; above 12,000 ft uses turbine/high-performance planning assumptions. FAA service notes with ABV/BLW altitude restrictions are applied where present.
 
 
-V51: Adds FAA NASR ARTCC HIGH/LOW boundaries and RCAG HIGH/LOW frequency data. Flights at/above FL180 use the applicable ARTCC and high-altitude RCAG frequencies during the climb/cruise/descent profile; lower altitude logic remains the V49/V50 engine.
+V52: Adds FAA NASR ARTCC HIGH/LOW boundaries and RCAG HIGH/LOW frequency data. Flights at/above FL180 use the applicable ARTCC and high-altitude RCAG frequencies during the climb/cruise/descent profile; lower altitude logic remains the V49/V50 engine.
