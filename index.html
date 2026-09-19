@@ -32,6 +32,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-end:last-child{border-bottom:0}
 #runwayWindPanel .rw-text{color:#0b1b33;font-size:18px;line-height:1.35}
 #runwayWindPanel .rw-text b{font-size:22px}
+#runwayWindPanel .rw-best{display:inline-block;margin-bottom:5px;padding:4px 8px;border-radius:999px;background:#dcecff;color:#075dcc;font-size:12px;font-weight:900;letter-spacing:.06em}
 #runwayWindPanel .rw-close{margin-top:16px;background:#e7f1ff;color:#075dcc;border:0;border-radius:16px;padding:15px;font-size:18px;font-weight:850}
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
@@ -186,10 +187,14 @@ function calcRunwayWind(){
     vals.push({rwy:id,heading,head:ws*Math.cos(rr),cross:ws*Math.sin(rr)});
   }));
   if(!vals.length){$("rwResults").innerHTML='<div class="rw-empty">No runway heading data available.</div>';return;}
-  $("rwResults").innerHTML=vals.map(v=>{
+  // Put the runway with the strongest headwind component first. If two are
+  // effectively tied, prefer the one with the smaller crosswind component.
+  vals.sort((a,b)=>(b.head-a.head) || (Math.abs(a.cross)-Math.abs(b.cross)));
+  $("rwResults").innerHTML=vals.map((v,i)=>{
     let along=v.head>=0?`Headwind ${Math.abs(v.head).toFixed(1)} kt`:`Tailwind ${Math.abs(v.head).toFixed(1)} kt`;
     let side=Math.abs(v.cross)<0.05?'Crosswind 0.0 kt':`Crosswind ${Math.abs(v.cross).toFixed(1)} kt from ${v.cross>0?'RIGHT':'LEFT'}`;
-    return `<div class="rw-end">${runwayWindGraphic(v,wd,ws)}<div class="rw-text"><b>RWY ${v.rwy}</b><br><strong>${along}</strong><br>${side}</div></div>`;
+    let best=i===0?'<span class="rw-best">BEST WIND</span><br>':'';
+    return `<div class="rw-end">${runwayWindGraphic(v,wd,ws)}<div class="rw-text">${best}<b>RWY ${v.rwy}</b><br><strong>${along}</strong><br>${side}</div></div>`;
   }).join('');
 }
 function uniqueRows(rows){
