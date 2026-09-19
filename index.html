@@ -1,7 +1,7 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f"><link rel="manifest" href="manifest.json">
-<title>ATC Quick v34</title>
+<title>ATC Quick v43</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:720px;margin:auto;padding:18px 16px 40px}.top{display:flex;justify-content:space-between;align-items:end}.tag{font-size:12px;color:#8da7c2}
@@ -17,6 +17,23 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 .searchItem{padding:11px;border-bottom:1px solid #203247;cursor:pointer}
 .searchItem:last-child{border-bottom:0}
 .searchItem b{display:block}.searchItem span{font-size:12px;color:#91a7bd}
+
+/* V43 Airport Quick-style runway wind panel */
+#runwayWindPanel{background:#f4f7fb!important;color:#0b1b33!important;padding:18px!important}
+#runwayWindPanel .rw-light{max-width:560px;margin:22px auto;background:#fff;border:1px solid #dce5ef;border-radius:24px;padding:20px;box-shadow:0 10px 30px rgba(11,27,51,.12)}
+#runwayWindPanel .rw-title{font-size:25px;font-weight:900;color:#0b1b33}
+#runwayWindPanel .rw-sub{font-size:14px;color:#6d7f96;margin-top:3px}
+#runwayWindPanel .rw-inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+#runwayWindPanel .rw-inputs label{font-size:14px;color:#60748d;font-weight:800}
+#runwayWindPanel .rw-inputs input{margin-top:6px;background:#fff;color:#0b1b33;border:1px solid #cbd8e6;border-radius:16px;padding:14px;font-size:22px}
+#runwayWindPanel .rw-help{color:#60748d;font-size:14px;line-height:1.35;margin:14px 0 6px}
+#runwayWindPanel .rw-result{margin-top:6px;background:#f1f5f9;border-radius:20px;padding:6px 16px}
+#runwayWindPanel .rw-end{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:center;padding:16px 0;border-bottom:1px solid #d7e1ec}
+#runwayWindPanel .rw-end:last-child{border-bottom:0}
+#runwayWindPanel .rw-text{color:#0b1b33;font-size:18px;line-height:1.35}
+#runwayWindPanel .rw-text b{font-size:22px}
+#runwayWindPanel .rw-close{margin-top:16px;background:#e7f1ff;color:#075dcc;border:0;border-radius:16px;padding:15px;font-size:18px;font-weight:850}
+#runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
 <div class="top"><div><div class="tag">FLIGHT-TEST BUILD</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
@@ -69,18 +86,17 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   </div>
 </div>
 
-<div id="runwayWindPanel" class="hidden" style="position:fixed;inset:0;background:#07111ef2;z-index:70;padding:18px;overflow:auto">
-  <div class="card" style="max-width:560px;margin:38px auto">
-    <div class="tag">RUNWAY WIND</div>
-    <div id="rwAirport" style="font-size:22px;font-weight:800;margin:4px 0 14px"></div>
-    <div id="rwRunways"></div>
-    <div class="tag" style="margin-top:18px">MANUAL WIND</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
-      <label><b>Direction °</b><input id="rwDir" inputmode="decimal" placeholder="240" oninput="calcRunwayWind()"></label>
-      <label><b>Speed kt</b><input id="rwSpd" inputmode="decimal" placeholder="12" oninput="calcRunwayWind()"></label>
+<div id="runwayWindPanel" class="hidden" style="position:fixed;inset:0;z-index:70;overflow:auto">
+  <div class="rw-light">
+    <div class="rw-title">Runway Wind</div>
+    <div id="rwAirport" class="rw-sub"></div>
+    <div class="rw-inputs">
+      <label>Wind Direction °<input id="rwDir" type="number" inputmode="numeric" placeholder="310" oninput="calcRunwayWind()"></label>
+      <label>Wind Speed kt<input id="rwSpd" type="number" inputmode="decimal" placeholder="8" oninput="calcRunwayWind()"></label>
     </div>
-    <div id="rwResults" style="margin-top:16px" class="muted">Enter wind direction and speed.</div>
-    <button class="secondary" style="width:100%;margin-top:18px" onclick="closeRunwayWind()">Close</button>
+    <div class="rw-help">Enter reported wind direction and speed. Arrows show wind relative to each runway end.</div>
+    <div id="rwResults" class="rw-result"><div class="rw-empty">Enter wind direction and speed.</div></div>
+    <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
 </main><script src="data.js"></script><script>
@@ -122,26 +138,40 @@ function runwayEnds(a){
 function openRunwayWind(){
   let a=aqAirport($("dest").value); if(!a)return;
   $("rwAirport").textContent=`${a.id} — ${a.name||""}`;
-  $("rwRunways").innerHTML=(a.runways||[]).map(r=>`<div class="step"><b>${r[0]}</b> ${r[1]||""} × ${r[2]||""} ft${r[3]?" · "+r[3]:""}</div>`).join("");
-  $("rwResults").innerHTML='Enter wind direction and speed.';
+  $("rwDir").value=""; $("rwSpd").value="";
+  $("rwResults").innerHTML='<div class="rw-empty">Enter wind direction and speed.</div>';
   $("runwayWindPanel").classList.remove("hidden");
+  setTimeout(()=>$("rwDir").focus(),80);
 }
 function closeRunwayWind(){ $("runwayWindPanel").classList.add("hidden"); }
+function runwayWindGraphic(v,wd,ws){
+  let rel=((wd-v.heading+540)%360)-180;
+  // Wind arrow points in the direction the air is moving, relative to a vertical runway.
+  let rot=rel+180;
+  return `<svg viewBox="0 0 120 120" width="120" height="120" aria-label="Runway ${v.rwy} wind graphic">
+    <defs><marker id="ah${String(v.rwy).replace(/[^A-Za-z0-9]/g,'')}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#1685d1"/></marker></defs>
+    <circle cx="60" cy="60" r="52" fill="#fff" stroke="#cbd8e6" stroke-width="1.5"/>
+    <rect x="54" y="18" width="12" height="84" rx="6" fill="#26384c"/>
+    <line x1="60" y1="28" x2="60" y2="92" stroke="#fff" stroke-width="2" stroke-dasharray="7 6"/>
+    <text x="60" y="18" text-anchor="middle" font-size="13" font-weight="800" fill="#26384c">${v.rwy}</text>
+    <g transform="rotate(${rot.toFixed(1)} 60 60)"><line x1="60" y1="108" x2="60" y2="68" stroke="#1685d1" stroke-width="6" stroke-linecap="round" marker-end="url(#ah${String(v.rwy).replace(/[^A-Za-z0-9]/g,'')})"/></g>
+  </svg>`;
+}
 function calcRunwayWind(){
   let a=aqAirport($("dest").value), wd=Number($("rwDir").value), ws=Number($("rwSpd").value);
-  if(!a || !Number.isFinite(wd) || !Number.isFinite(ws) || ws<0){$("rwResults").innerHTML='Enter wind direction and speed.';return;}
-  wd=((wd%360)+360)%360;
+  if(!a || $("rwDir").value==="" || $("rwSpd").value==="" || !Number.isFinite(wd) || !Number.isFinite(ws) || wd<0 || wd>360 || ws<0){
+    $("rwResults").innerHTML='<div class="rw-empty">Enter wind direction (0–360°) and speed.</div>'; return;
+  }
+  wd=wd===360?0:wd;
   let vals=runwayEnds(a).map(e=>{
     let d=((wd-e.heading+540)%360)-180, rr=d*Math.PI/180;
-    let head=ws*Math.cos(rr), cross=ws*Math.sin(rr);
-    return {...e,head,cross,score:head};
+    return {...e,head:ws*Math.cos(rr),cross:ws*Math.sin(rr)};
   });
-  if(!vals.length){$("rwResults").innerHTML='No runway heading data available.';return;}
-  let best=vals.reduce((x,y)=>y.score>x.score?y:x);
+  if(!vals.length){$("rwResults").innerHTML='<div class="rw-empty">No runway heading data available.</div>';return;}
   $("rwResults").innerHTML=vals.map(v=>{
-    let hw=v.head>=0?`${Math.abs(v.head).toFixed(1)} kt headwind`:`${Math.abs(v.head).toFixed(1)} kt tailwind`;
-    let cw=Math.abs(v.cross)<0.05?'0.0 kt crosswind':`${Math.abs(v.cross).toFixed(1)} kt crosswind from ${v.cross>0?'left':'right'}`;
-    return `<div class="step" style="${v.rwy===best.rwy?'border:2px solid #2d9cff;border-radius:12px;padding:12px;margin:8px 0':''}"><div class="tag">${v.rwy===best.rwy?'BEST WIND · ':''}RWY ${v.rwy}</div><div style="font-size:18px;font-weight:800">${hw}</div><div>${cw}</div></div>`;
+    let along=v.head>=0?`Headwind ${Math.abs(v.head).toFixed(1)} kt`:`Tailwind ${Math.abs(v.head).toFixed(1)} kt`;
+    let side=Math.abs(v.cross)<0.05?'Crosswind 0.0 kt':`Crosswind ${Math.abs(v.cross).toFixed(1)} kt from ${v.cross>0?'RIGHT':'LEFT'}`;
+    return `<div class="rw-end">${runwayWindGraphic(v,wd,ws)}<div class="rw-text"><b>RWY ${v.rwy}</b><br><strong>${along}</strong><br>${side}</div></div>`;
   }).join('');
 }
 function uniqueRows(rows){

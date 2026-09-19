@@ -64,3 +64,6 @@ V35: removed only the redundant second Frequency Search button below LIKELY NEXT
 V36: Removed legacy LIKELY NEXT card display and changed service worker navigation to network-first with old-cache cleanup.
 
 V42: V40-style destination simplified to one Runway Wind button; dedicated overlay shows all runway wind components.
+
+
+V43: Keeps V42 destination Runway Wind button; calculator now uses Airport Quick-style light all-runway visual display with runway graphics and wind arrows.
