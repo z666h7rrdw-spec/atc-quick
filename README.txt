@@ -54,3 +54,5 @@ V28: streamlined destination to arrival-use frequencies; removed destination CTA
 V29: non-towered departure card includes first predicted controller; first controller removed from route; initial Likely Next advances to next handoff; towered destination is arrival-only; destination CTAF/Tower duplicate suppressed.
 
 V30 deployment build: same corrected v29 behavior, explicit V30 visible marker and v30 service-worker cache name. Upload the contents of this new V30 folder; verify index.html and service-worker.js timestamps change before testing.
+
+V31 hard-layout rules: non-towered departure card owns first predicted controller; initial LIKELY NEXT advances past it; predicted route suppresses local CTAF/Tower rows; towered destination card strictly ATIS/AWOS/ASOS/Approach/Tower/Ground only.

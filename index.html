@@ -1,7 +1,7 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f"><link rel="manifest" href="manifest.json">
-<title>ATC Quick v30</title>
+<title>ATC Quick v31</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:720px;margin:auto;padding:18px 16px 40px}.top{display:flex;justify-content:space-between;align-items:end}.tag{font-size:12px;color:#8da7c2}
@@ -57,7 +57,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V30 · FLIGHT TEST LOG</div>
+  <div class="tag">V31 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -100,6 +100,24 @@ function renderAirportCards(){
   dst.innerHTML=airportCardHTML(b,"DESTINATION");
   dep.style.display=a?"block":"none";
   dst.style.display=b?"block":"none";
+
+  // V31 hard rules: departure owns first controller; destination is arrival-use only.
+  if(a && seq && seq.length){
+    let depTowered=(a.freqs||[]).some(x=>/TOWER/i.test(String(x[0])));
+    if(!depTowered){
+      let label="Departure — "+String(seq[0].call||"").replace(/\s+(APPROACH|DEPARTURE)$/i,"");
+      let freq=fmtFreq(seq[0].freq);
+      if(!dep.textContent.includes(freq)){
+        dep.insertAdjacentHTML("beforeend",`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>${label}</b><span class="big" style="font-size:22px;white-space:nowrap">${freq}</span></div>`);
+      }
+    }
+  }
+  if(b){
+    let towered=(b.freqs||[]).some(x=>/TOWER/i.test(String(x[0])));
+    let keep=towered?/^(ATIS|AWOS|ASOS|APPROACH|TOWER|GROUND)$/i:/^(AWOS|ASOS|ATIS|CTAF|UNICOM)$/i;
+    let rows=(b.freqs||[]).filter(x=>keep.test(String(x[0]).trim()));
+    dst.innerHTML=airportCardHTML(b,"DESTINATION",uniqueRows(rows));
+  }
 }
 
 const $=id=>document.getElementById(id);
@@ -317,7 +335,22 @@ function render(){
      groups.push({call:s.call,facility:s.facility,freqs:[s.freq],start:i,end:i});
    }
  }
- let routeGroups=groups.filter(g=>!(idx>=g.start&&idx<=g.end));
+ let firstGroup=groups.length?groups[0]:null;
+ let destId=String($("dest").value||"").trim().toUpperCase();
+ let destShort=destId.replace(/^K(?=[A-Z]{3}$)/,"");
+ let routeGroups=groups.filter((g,gi)=>{
+   // The first controller is displayed as Departure on the departure-airport card.
+   if(gi===0)return false;
+   // Local destination rows belong only in the destination card.
+   let call=String(g.call||"").toUpperCase();
+   if(/CTAF|TOWER/.test(call) && (call.includes(destId)||call.includes(destShort)))return false;
+   return true;
+ });
+ // At initial guidance, LIKELY NEXT means the handoff after the departure controller.
+ if(idx===0 && routeGroups.length){
+   $("nextCall").textContent=routeGroups[0].call;
+   $("nextFreq").textContent=routeGroups[0].freqs.map(fmtFreq).join(" / ");
+ } routeGroups=routeGroups.filter(g=>!/CTAF|TOWER/i.test(String(g.call||"")));
  $("sequence").innerHTML=routeGroups.map(g=>{
    let state=g.end<idx?"PASSED":(idx>=g.start&&idx<=g.end)?"LIKELY NEXT":"AFTER";
    let other=knownOtherFreqs(g,g.freqs);
