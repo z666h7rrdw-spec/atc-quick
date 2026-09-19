@@ -342,7 +342,40 @@ function verticalProfile(totalNm,alongNm,cruiseAlt){
  let descentAlt=descentNm>0?cruiseAlt*Math.min(1,remain/descentNm):cruiseAlt;
  return Math.max(0,Math.min(cruiseAlt,climbAlt,descentAlt));
 }
+function pointInPoly(p,poly){
+ let y=p[0],x=p[1],inside=false;
+ for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+   let yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
+   if(((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-12)+xi)) inside=!inside;
+ }
+ return inside;
+}
+function artccAt(p,alt){
+ let band=alt>=18000?"HIGH":"LOW", fallback=null;
+ for(const [key,poly] of Object.entries(ATC_DATA.artccPolygons||{})){
+   let [id,b]=key.split("|");
+   if((b===band||b==="UNLIMITED")&&pointInPoly(p,poly)){if(b===band)return id;fallback=id}
+ }
+ return fallback;
+}
+function nearestCenterService(p,alt){
+ let center=artccAt(p,alt); if(!center)return null;
+ let wantHigh=alt>=18000,best=null,bd=1e9;
+ for(const r of (ATC_DATA.rcag||[])){
+   if(r[0]!==center)continue;
+   let band=r[6];
+   if(wantHigh && !(band==="HIGH"||band==="LOW/HIGH"||band==="ULTRA-HIGH"))continue;
+   if(!wantHigh && !(band==="LOW"||band==="LOW/HIGH"))continue;
+   let d=dist(p,[r[3],r[4]]); if(d<bd){bd=d;best=r}
+ }
+ if(!best)return null;
+ // Convert RCAG record to the service shape already used by the renderer.
+ return [best[0],best[1]+" CENTER",null,best[3],best[4],best[5],best[6]+" "+best[2]+" RCAG"];
+}
 function nearestService(p,track,alt){
+ // At/above FL180 use FAA ARTCC HIGH/LOW boundary + RCAG sectorization data.
+ // Below FL180 preserve the proven V49/V51 terminal prediction engine.
+ if(alt>=18000){let c=nearestCenterService(p,alt);if(c)return c}
  let best=null,bd=1e9;
  for(const s of ATC_DATA.services){
    let d=dist(p,[s[3],s[4]]);
