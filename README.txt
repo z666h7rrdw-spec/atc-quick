@@ -75,3 +75,5 @@ V47: Best-wind runway selection is now explicit before rendering; strongest head
 V48: Departure/destination Approach and Departure frequency rows now show packaged directional sector degree ranges and a simple compass direction when available.
 
 V49: Sector ranges on Approach/Departure airport-card rows made explicit and high-visibility (SECTOR degrees + compass). Cache advanced to v49.
+
+V50: altitude-aware ATC prediction. Models climb/cruise/descent; above 12,000 ft uses turbine/high-performance planning assumptions. FAA service notes with ABV/BLW altitude restrictions are applied where present.

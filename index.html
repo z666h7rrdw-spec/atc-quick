@@ -319,9 +319,35 @@ function bearing(a,b){let p1=rad(a[0]),p2=rad(b[0]),dl=rad(b[1]-a[1]);return (Ma
 function inSector(b,s){let m=s.match(/(\d{3})-(\d{3})/);if(!m)return true;let a=+m[1],z=+m[2];return a<=z?b>=a&&b<=z:b>=a||b<=z}
 function interpolate(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
 function routeSamples(points){let out=[];for(let j=0;j<points.length-1;j++){let d=dist(points[j],points[j+1]),n=Math.max(2,Math.ceil(d/8));for(let k=0;k<n;k++)out.push(interpolate(points[j],points[j+1],k/n))}out.push(points.at(-1));return out}
-function nearestService(p,track){
+function altitudeLimits(note){
+ note=String(note||"").toUpperCase();
+ let min=-Infinity,max=Infinity,m;
+ // FAA notes commonly use forms such as "7000 FT & ABV", "ABV 3000 FT", and "1500 FT & BLW".
+ if((m=note.match(/(\d{3,5})\s*FT\s*(?:&|AND)?\s*(?:ABV|ABOVE)/))) min=Number(m[1]);
+ if((m=note.match(/(?:ABV|ABOVE)\s*(\d{3,5})\s*FT/))) min=Number(m[1]);
+ if((m=note.match(/(\d{3,5})\s*FT\s*(?:&|AND)?\s*(?:BLW|BELOW)/))) max=Number(m[1]);
+ if((m=note.match(/(?:BLW|BELOW)\s*(\d{3,5})\s*FT/))) max=Number(m[1]);
+ return {min,max};
+}
+function altitudeApplies(note,alt){let l=altitudeLimits(note);return alt>=l.min&&alt<=l.max}
+function verticalProfile(totalNm,alongNm,cruiseAlt){
+ // Above 12,000 ft, use a turbine/high-performance planning profile. At/below 12,000, use piston-GA assumptions.
+ let turbine=cruiseAlt>12000;
+ let climbFpm=turbine?1500:800, climbKt=turbine?220:120;
+ let descentFpm=turbine?1500:500, descentKt=turbine?250:140;
+ let climbNm=(cruiseAlt/climbFpm)/60*climbKt;
+ let descentNm=(cruiseAlt/descentFpm)/60*descentKt;
+ let climbAlt=climbNm>0?cruiseAlt*Math.min(1,alongNm/climbNm):cruiseAlt;
+ let remain=Math.max(0,totalNm-alongNm);
+ let descentAlt=descentNm>0?cruiseAlt*Math.min(1,remain/descentNm):cruiseAlt;
+ return Math.max(0,Math.min(cruiseAlt,climbAlt,descentAlt));
+}
+function nearestService(p,track,alt){
  let best=null,bd=1e9;
- for(const s of ATC_DATA.services){let d=dist(p,[s[3],s[4]]);if(d<bd && d<75 && inSector(track,s[6])){bd=d;best=s}}
+ for(const s of ATC_DATA.services){
+   let d=dist(p,[s[3],s[4]]);
+   if(d<bd && d<75 && inSector(track,s[6]) && altitudeApplies(s[6],alt)){bd=d;best=s}
+ }
  return best
 }
 
@@ -379,7 +405,15 @@ function buildRoute(){
  let ids=[o,...$("wps").value.split(/[ ,]+/).filter(Boolean),d];
  let pts=ids.map(resolve); if(pts.some(x=>!x)){alert("I couldn't find: "+ids.filter((x,i)=>!pts[i]).join(", "));return}
  route=pts; let sm=routeSamples(pts), raw=[];
- for(let i=0;i<sm.length;i++){let tr=bearing(sm[i],sm[Math.min(i+1,sm.length-1)]);let s=nearestService(sm[i],tr);if(s){let key=s[0]+"|"+s[5];if(!raw.length||raw.at(-1).key!==key)raw.push({key,call:s[1],facility:s[0],freq:s[5],at:sm[i]})}}
+ let cruiseAlt=Number($("alt").value)||0;
+ let cum=[0]; for(let i=1;i<sm.length;i++)cum.push(cum.at(-1)+dist(sm[i-1],sm[i]));
+ let totalNm=cum.at(-1)||0;
+ for(let i=0;i<sm.length;i++){
+   let tr=bearing(sm[i],sm[Math.min(i+1,sm.length-1)]);
+   let predictedAlt=verticalProfile(totalNm,cum[i],cruiseAlt);
+   let s=nearestService(sm[i],tr,predictedAlt);
+   if(s){let key=s[0]+"|"+s[5];if(!raw.length||raw.at(-1).key!==key)raw.push({key,call:s[1],facility:s[0],freq:s[5],at:sm[i],alt:Math.round(predictedAlt/100)*100})}
+ }
  // De-noise tiny oscillations, and collapse repeats.
  seq=[]; for(const r of raw){if(seq.length && seq.at(-1).key===r.key)continue; if(seq.length>=2 && seq.at(-2).key===r.key){seq.pop();continue} seq.push(r)}
  // Known calibration route: FAA published terminal frequencies + user's repeatedly observed handoff sequence.
