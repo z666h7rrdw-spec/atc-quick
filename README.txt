@@ -52,3 +52,5 @@ V27: integrates Airport Quick USA airport-frequency database. Shows full departu
 V28: streamlined destination to arrival-use frequencies; removed destination CTAF duplicate from predicted route; non-towered departure card adds first predicted ATC controller/frequency (e.g. KHBI -> Greensboro).
 
 V29: non-towered departure card includes first predicted controller; first controller removed from route; initial Likely Next advances to next handoff; towered destination is arrival-only; destination CTAF/Tower duplicate suppressed.
+
+V30 deployment build: same corrected v29 behavior, explicit V30 visible marker and v30 service-worker cache name. Upload the contents of this new V30 folder; verify index.html and service-worker.js timestamps change before testing.
