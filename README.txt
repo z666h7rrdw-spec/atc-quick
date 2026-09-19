@@ -58,3 +58,5 @@ V30 deployment build: same corrected v29 behavior, explicit V30 visible marker a
 V31 hard-layout rules: non-towered departure card owns first predicted controller; initial LIKELY NEXT advances past it; predicted route suppresses local CTAF/Tower rows; towered destination card strictly ATIS/AWOS/ASOS/Approach/Tower/Ground only.
 
 V33 AUDITED: rebuilt from V31. Added missing uniqueRows helper and display-only corrections. Prediction/search/GPS engine unchanged.
+
+V34: removed only the redundant second Frequency Search button below LIKELY NEXT. All V33 route, airport-card, search, GPS, and prediction behavior preserved.
