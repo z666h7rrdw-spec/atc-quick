@@ -71,3 +71,5 @@ V45: Keeps V44 layout and button; runway calculator now uses the exact V40 a.run
 V46: Runway Wind results automatically sort the best headwind runway to the top and label it BEST WIND; all V45 runway graphics/calculations remain unchanged.
 
 V47: Best-wind runway selection is now explicit before rendering; strongest headwind is forced into the first row and labeled BEST WIND.
+
+V48: Departure/destination Approach and Departure frequency rows now show packaged directional sector degree ranges and a simple compass direction when available.

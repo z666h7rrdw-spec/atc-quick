@@ -110,12 +110,38 @@ function aqAirport(id){
   if(id.length===3)id="K"+id;
   return AIRPORT_QUICK_DATA.find(a=>String(a.id||"").toUpperCase()===id || String(a.faa||"").toUpperCase()===id.replace(/^K(?=[A-Z]{3}$)/,""));
 }
+function compassForSector(start,end){
+  start=Number(start); end=Number(end);
+  if(!Number.isFinite(start)||!Number.isFinite(end))return "";
+  let span=(end-start+360)%360;
+  let mid=(start+span/2)%360;
+  const pts=["N","NE","E","SE","S","SW","W","NW"];
+  return pts[Math.round(mid/45)%8];
+}
+function directionalServiceNote(a,label,freq){
+  if(!a || !/^(approach|departure)$/i.test(String(label||"").trim()))return "";
+  let id=String(a.id||a.faa||"").toUpperCase().replace(/^K(?=[A-Z]{3}$)/,"");
+  let f=Number(freq);
+  let hits=(ATC_DATA.services||[]).filter(s=>String(s[2]||"").toUpperCase().replace(/^K(?=[A-Z]{3}$)/,"")===id && Math.abs(Number(s[5])-f)<0.001);
+  for(const s of hits){
+    let m=String(s[6]||"").match(/(?:^|\s)(\d{3})\s*-\s*(\d{3})(?:\s|$)/);
+    if(m){
+      let c=compassForSector(m[1],m[2]);
+      return `${m[1]}°–${m[2]}°${c?` · ${c}`:""}`;
+    }
+  }
+  return "";
+}
 function airportCardHTML(a,title,rowsOverride){
       if(!a)return "";
       let source=Array.isArray(rowsOverride)?rowsOverride:(a.freqs||[]);
-      let rows=source.map(x=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-        <b>${x[0]}</b><span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
-      </div>`).join("");
+      let rows=source.map(x=>{
+        let note=directionalServiceNote(a,x[0],x[1]);
+        return `<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+          <div style="min-width:0"><b>${x[0]}</b>${note?`<div class="muted" style="font-size:12px;margin-top:3px;white-space:nowrap">${note}</div>`:""}</div>
+          <span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
+        </div>`;
+      }).join("");
       return `<div class="tag">${title} — ${a.id}</div>
         <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${rows}`;
     }
@@ -187,7 +213,7 @@ function calcRunwayWind(){
     vals.push({rwy:id,heading,head:ws*Math.cos(rr),cross:ws*Math.sin(rr)});
   }));
   if(!vals.length){$("rwResults").innerHTML='<div class="rw-empty">No runway heading data available.</div>';return;}
-  // V47: explicitly select the strongest headwind runway first, then order
+  // V48: explicitly select the strongest headwind runway first, then order
   // the remaining runway ends by headwind component. This avoids relying on
   // the source/database runway order.
   let bestIndex=0;
