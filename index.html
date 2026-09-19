@@ -1,7 +1,7 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f"><link rel="manifest" href="manifest.json">
-<title>ATC Quick v31</title>
+<title>ATC Quick v33</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:720px;margin:auto;padding:18px 16px 40px}.top{display:flex;justify-content:space-between;align-items:end}.tag{font-size:12px;color:#8da7c2}
@@ -57,7 +57,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V31 · FLIGHT TEST LOG</div>
+  <div class="tag">V33 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -83,15 +83,74 @@ function aqAirport(id){
   if(id.length===3)id="K"+id;
   return AIRPORT_QUICK_DATA.find(a=>String(a.id||"").toUpperCase()===id || String(a.faa||"").toUpperCase()===id.replace(/^K(?=[A-Z]{3}$)/,""));
 }
-function airportCardHTML(a,title){
-  if(!a)return "";
-  let rows=(a.freqs||[]).map(x=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-    <b>${x[0]}</b><span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
-  </div>`).join("");
-  return `<div class="tag">${title} — ${a.id}</div>
-    <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${rows}`;
-}
-function renderAirportCards(){
+function airportCardHTML(a,title,rowsOverride){
+      if(!a)return "";
+      let source=Array.isArray(rowsOverride)?rowsOverride:(a.freqs||[]);
+      let rows=source.map(x=>`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+        <b>${x[0]}</b><span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
+      </div>`).join("");
+      return `<div class="tag">${title} — ${a.id}</div>
+        <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${rows}`;
+    }
+function uniqueRows(rows){
+      let seen=new Set();
+      return (rows||[]).filter(x=>{
+        let k=String(x[0])+"|"+String(x[1]);
+        if(seen.has(k))return false;
+        seen.add(k);return true;
+      });
+    }
+    function v33DisplayFix(){
+      let dep=document.getElementById("departureAirportCard");
+      let dst=document.getElementById("destinationAirportCard");
+      let seqEl=document.getElementById("sequence");
+      let o=document.getElementById("origin"),d=document.getElementById("dest");
+      if(!dep||!dst||!o||!d)return;
+      let a=aqAirport(o.value),b=aqAirport(d.value);
+
+      if(a){
+        let rows=(a.freqs||[]).slice();
+        if(seq && seq.length){
+          let first=seq[0];
+          let call=String(first.call||"").replace(/\s+(APPROACH|DEPARTURE)$/i,"").trim();
+          let freq=fmtFreq(first.freq);
+          if(call && freq && !rows.some(x=>String(x[1])===String(freq))){
+            rows.push(["Departure — "+call,freq]);
+          }
+        }
+        dep.innerHTML=airportCardHTML(a,"DEPARTURE",uniqueRows(rows));
+        dep.style.display="block";
+      }
+
+      if(b){
+        let all=(b.freqs||[]);
+        let towered=all.some(x=>/^TOWER$/i.test(String(x[0]).trim()));
+        let keep=towered?/^(ATIS|AWOS|ASOS|APPROACH|TOWER|GROUND)$/i:/^(AWOS|ASOS|ATIS|CTAF|UNICOM)$/i;
+        let rows=uniqueRows(all.filter(x=>keep.test(String(x[0]).trim())));
+        dst.innerHTML=airportCardHTML(b,"DESTINATION",rows);
+        dst.style.display="block";
+      }
+
+      if(seqEl){
+        [...seqEl.querySelectorAll(".step")].forEach(row=>{
+          let t=(row.textContent||"").toUpperCase();
+          if(/\bCTAF\b|\bTOWER\b/.test(t))row.remove();
+        });
+      }
+
+      if(idx===0 && seqEl){
+        let firstRemaining=seqEl.querySelector(".step");
+        if(firstRemaining){
+          let name=firstRemaining.querySelector("b"),freq=firstRemaining.querySelector(".big");
+          if(name&&freq){
+            $("nextCall").textContent=name.textContent.trim();
+            $("nextFreq").textContent=freq.textContent.trim();
+          }
+        }
+      }
+    }
+
+    function renderAirportCards(){
   let dep=document.getElementById("departureAirportCard"),dst=document.getElementById("destinationAirportCard");
   let o=document.getElementById("origin"),d=document.getElementById("dest");
   if(!dep||!dst||!o||!d)return;
@@ -368,6 +427,8 @@ function render(){
  }).join("");
  $("log").innerHTML=logs.length?logs.map(x=>`<div class="step">${x}</div>`).join(""):"No handoffs logged yet.";
  renderAirportCards()
+
+  v33DisplayFix();
 }
 function handoff(){let actual=prompt("Frequency ATC actually assigned (optional):",seq[idx]?.freq??"");let s=seq[idx];logs.push(`${new Date().toLocaleTimeString()} — predicted ${s.call} ${s.freq}; actual ${actual||"not entered"}`);if(idx<seq.length-1)idx++;render()}
 function prev(){if(idx>0)idx--;render()}

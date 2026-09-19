@@ -56,3 +56,5 @@ V29: non-towered departure card includes first predicted controller; first contr
 V30 deployment build: same corrected v29 behavior, explicit V30 visible marker and v30 service-worker cache name. Upload the contents of this new V30 folder; verify index.html and service-worker.js timestamps change before testing.
 
 V31 hard-layout rules: non-towered departure card owns first predicted controller; initial LIKELY NEXT advances past it; predicted route suppresses local CTAF/Tower rows; towered destination card strictly ATIS/AWOS/ASOS/Approach/Tower/Ground only.
+
+V33 AUDITED: rebuilt from V31. Added missing uniqueRows helper and display-only corrections. Prediction/search/GPS engine unchanged.
