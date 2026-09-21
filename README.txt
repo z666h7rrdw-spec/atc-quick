@@ -1,4 +1,5 @@
-ATC Quick V55
+ATC Quick V56
+Departure + destination cards now include elevation, runway length, and traffic pattern. Runway Wind remains destination-only.
 Home-screen hierarchy cleanup; routing engine preserved from V52/V53.
 
 ATC Quick V53
@@ -86,5 +87,3 @@ V50: altitude-aware ATC prediction. Models climb/cruise/descent; above 12,000 ft
 
 
 V52: Adds FAA NASR ARTCC HIGH/LOW boundaries and RCAG HIGH/LOW frequency data. Flights at/above FL180 use the applicable ARTCC and high-altitude RCAG frequencies during the climb/cruise/descent profile; lower altitude logic remains the V49/V50 engine.
-
-V55: Added Airport Quick-style basic airport information to both departure and destination cards: elevation, runway numbers/lengths, and traffic pattern direction. Runway Wind remains destination-only. V52 altitude-aware routing logic preserved.

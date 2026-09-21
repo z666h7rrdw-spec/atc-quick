@@ -1,7 +1,7 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f"><link rel="manifest" href="manifest.json">
-<title>ATC Quick v54</title>
+<title>ATC Quick v56</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:720px;margin:auto;padding:18px 16px 40px}.top{display:flex;justify-content:space-between;align-items:end}.tag{font-size:12px;color:#8da7c2}
@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V55</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V56</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -72,7 +72,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V55 · FLIGHT TEST LOG</div>
+  <div class="tag">V56 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -102,7 +102,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=55"></script><!-- ATC Quick V55 -->
+</main><script src="data.js?v=56"></script><!-- ATC Quick V56 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -136,28 +136,31 @@ function directionalServiceNote(a,label,freq){
   return "";
 }
 function airportCardHTML(a,title,rowsOverride){
-      if(!a)return "";
-      let source=Array.isArray(rowsOverride)?rowsOverride:(a.freqs||[]);
-      let rows=source.map(x=>{
-        let note=directionalServiceNote(a,x[0],x[1]);
-        return `<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
-          <div style="min-width:0"><b>${x[0]}</b>${note?`<div class="muted" style="font-size:14px;margin-top:4px;white-space:nowrap;font-weight:700;color:#8fb4d9">${note}</div>`:""}</div>
-          <span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
-        </div>`;
-      }).join("");
-      let elev=Number(a.elev);
-      let airportInfo=`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Elevation</b><span class="big" style="font-size:18px;white-space:nowrap">${Number.isFinite(elev)?elev.toLocaleString()+" ft MSL":"—"}</span></div>`;
-      let runwayInfo=((a.runways||[]).map(r=>{
-        let id=String((r&&r.id)||"").trim();
-        let length=Number(r&&r.length);
-        let traffic=Array.isArray(r&&r.ends)?r.ends.map(e=>`${String((e&&e.id)||"").trim()} ${String((e&&e.traffic)||"").trim()}`).filter(x=>x.trim()).join(" · "):"";
-        return `<div class="step"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Runway ${id}</b><span class="big" style="font-size:18px;white-space:nowrap">${Number.isFinite(length)&&length?length.toLocaleString()+" ft":""}</span></div>${traffic?`<div class="muted" style="font-size:13px;margin-top:4px">Traffic: ${traffic}</div>`:""}</div>`;
-      }).join(""));
-      return `<div class="tag">${title} — ${a.id}</div>
-        <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>
-        ${airportInfo}${runwayInfo?`<div class="tag" style="margin-top:12px">RUNWAYS</div>${runwayInfo}`:""}
-        <div class="tag" style="margin-top:12px">FREQUENCIES</div>${rows}`;
-    }
+  if(!a)return "";
+  let source=Array.isArray(rowsOverride)?rowsOverride:(a.freqs||[]);
+  let runwayRows=(a.runways||[]).map(r=>{
+    let rid=String(r.id||"");
+    let len=Number(r.length);
+    let traffic=(r.ends||[]).map(e=>`${e.id} ${String(e.traffic||"").toUpperCase().startsWith("R")?"R":"L"}`).join(" · ");
+    return `<div class="step" style="padding-top:10px;padding-bottom:10px">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Runway ${rid}</b><span style="font-weight:800;white-space:nowrap">${Number.isFinite(len)?len.toLocaleString()+" ft":""}</span></div>
+      ${traffic?`<div class="muted" style="font-size:14px;margin-top:4px">Traffic: ${traffic}</div>`:""}
+    </div>`;
+  }).join("");
+  let freqRows=source.map(x=>{
+    let note=directionalServiceNote(a,x[0],x[1]);
+    return `<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+      <div style="min-width:0"><b>${x[0]}</b>${note?`<div class="muted" style="font-size:14px;margin-top:4px;white-space:nowrap;font-weight:700;color:#8fb4d9">${note}</div>`:""}</div>
+      <span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
+    </div>`;
+  }).join("");
+  let elev=Number(a.elev);
+  return `<div class="tag">${title} — ${a.id}</div>
+    <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>
+    ${Number.isFinite(elev)?`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Elevation</b><span style="font-weight:800;white-space:nowrap">${elev.toLocaleString()} ft MSL</span></div>`:""}
+    ${runwayRows?`<div class="tag" style="margin-top:14px">RUNWAYS</div>${runwayRows}`:""}
+    ${freqRows?`<div class="tag" style="margin-top:14px">FREQUENCIES</div>${freqRows}`:""}`;
+}
 function runwayWindButtonHTML(a){
   if(!a || !Array.isArray(a.runways) || !a.runways.length)return "";
   return `<button type="button" onclick="openRunwayWind()" style="width:100%;margin-top:16px;padding:18px;font-size:20px;font-weight:800">Runway Wind</button>`;
@@ -319,7 +322,7 @@ function uniqueRows(rows){
     let towered=(b.freqs||[]).some(x=>/TOWER/i.test(String(x[0])));
     let keep=towered?/^(ATIS|AWOS|ASOS|APPROACH|TOWER|GROUND)$/i:/^(AWOS|ASOS|ATIS|CTAF|UNICOM)$/i;
     let rows=(b.freqs||[]).filter(x=>keep.test(String(x[0]).trim()));
-    dst.innerHTML=airportCardHTML(b,"DESTINATION",uniqueRows(rows));
+    dst.innerHTML=destinationCardHTML(b,uniqueRows(rows));
   }
 }
 
