@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V54</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V55</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -72,7 +72,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V54 · FLIGHT TEST LOG</div>
+  <div class="tag">V55 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -102,7 +102,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=54"></script><!-- ATC Quick V54 -->
+</main><script src="data.js?v=55"></script><!-- ATC Quick V55 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -145,8 +145,18 @@ function airportCardHTML(a,title,rowsOverride){
           <span class="big" style="font-size:22px;white-space:nowrap">${x[1]}</span>
         </div>`;
       }).join("");
+      let elev=Number(a.elev);
+      let airportInfo=`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Elevation</b><span class="big" style="font-size:18px;white-space:nowrap">${Number.isFinite(elev)?elev.toLocaleString()+" ft MSL":"—"}</span></div>`;
+      let runwayInfo=((a.runways||[]).map(r=>{
+        let id=String((r&&r.id)||"").trim();
+        let length=Number(r&&r.length);
+        let traffic=Array.isArray(r&&r.ends)?r.ends.map(e=>`${String((e&&e.id)||"").trim()} ${String((e&&e.traffic)||"").trim()}`).filter(x=>x.trim()).join(" · "):"";
+        return `<div class="step"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Runway ${id}</b><span class="big" style="font-size:18px;white-space:nowrap">${Number.isFinite(length)&&length?length.toLocaleString()+" ft":""}</span></div>${traffic?`<div class="muted" style="font-size:13px;margin-top:4px">Traffic: ${traffic}</div>`:""}</div>`;
+      }).join(""));
       return `<div class="tag">${title} — ${a.id}</div>
-        <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>${rows}`;
+        <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>
+        ${airportInfo}${runwayInfo?`<div class="tag" style="margin-top:12px">RUNWAYS</div>${runwayInfo}`:""}
+        <div class="tag" style="margin-top:12px">FREQUENCIES</div>${rows}`;
     }
 function runwayWindButtonHTML(a){
   if(!a || !Array.isArray(a.runways) || !a.runways.length)return "";

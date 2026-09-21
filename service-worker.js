@@ -1,5 +1,5 @@
-const C='atc-quick-v54';
-const F=['./','./index.html','./data.js?v=54','./airports.json','./manifest.json','./icon-192.png','./icon-512.png'];
+const C='atc-quick-v55';
+const F=['./','./index.html','./data.js?v=55','./airports.json','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(F)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))),self.clients.claim()])));
 self.addEventListener('fetch',e=>{
