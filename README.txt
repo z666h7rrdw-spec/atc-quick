@@ -1,4 +1,5 @@
-ATC Quick V57
+ATC Quick V58
+Adds a visible CURRENT controller card above Predicted Route; ATC handoff advances CURRENT.
 Adds a CURRENT controller card above Predicted Route. CURRENT advances with ATC handoffs.
 Preserves V56 airport/runway cards, destination-only Runway Wind, and V52 altitude-aware routing.
 

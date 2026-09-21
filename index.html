@@ -74,7 +74,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V57 · FLIGHT TEST LOG</div>
+  <div class="tag">V58 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -609,6 +609,28 @@ function render(){
    }
  }
  let firstGroup=groups.length?groups[0]:null;
+
+ // CURRENT controller: show the controller represented by the active sequence index.
+ // At departure this is the first controller (for KHBI→KSUT: GREENSBORO 126.6).
+ let currentGroup=groups.find(g=>idx>=g.start && idx<=g.end) || firstGroup;
+ let currentCard=$("currentControllerCard");
+ if(currentCard && currentGroup){
+   let currentOther=knownOtherFreqs(currentGroup,currentGroup.freqs);
+   currentCard.style.display="block";
+   currentCard.innerHTML=`
+     <div class="tag">CURRENT</div>
+     <div style="display:grid;grid-template-columns:${currentOther.length?"minmax(0, 62%) minmax(0, 38%)":"minmax(0, 1fr)"};column-gap:10px;align-items:center;margin-top:8px">
+       <div style="min-width:0">
+         <div style="font-size:24px;font-weight:900;overflow-wrap:anywhere">${currentGroup.call}</div>
+         <div class="big" style="font-size:34px;line-height:1.15;margin-top:4px">${currentGroup.freqs.map(fmtFreq).join(" / ")}</div>
+       </div>
+       ${currentOther.length?`<div style="text-align:right;border-left:1px solid rgba(140,170,200,.22);padding-left:10px"><div class="muted" style="font-size:11px;letter-spacing:.04em">OTHER</div><div style="font-size:14px;font-weight:700;line-height:1.5">${currentOther.map(x=>`<span style="display:inline-block;white-space:nowrap;margin-left:7px">${x}</span>`).join("")}</div></div>`:""}
+     </div>`;
+ }else if(currentCard){
+   currentCard.style.display="none";
+   currentCard.innerHTML="";
+ }
+
  let destId=String($("dest").value||"").trim().toUpperCase();
  let destShort=destId.replace(/^K(?=[A-Z]{3}$)/,"");
  let routeGroups=groups.filter((g,gi)=>{
@@ -649,4 +671,4 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=57')}</script></body></html>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=58')}</script></body></html>
