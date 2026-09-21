@@ -1,5 +1,2 @@
-ATC Quick V60
-Keeps completed controller rows visible, dimmed and labeled PASSED. CURRENT advances by GPS or ATC handoff; future rows remain AFTER.
-
-ATC Quick V59
-CURRENT is now the first row inside the proven Predicted Route renderer. The active controller advances with ATC handoffs. Preserves V56 runway cards, destination-only Runway Wind, and V52 altitude-aware routing.
+ATC Quick V61
+Keeps the complete controller history visible. Controllers behind the current route index remain in Predicted Route, dimmed and labeled PASSED; the active controller is CURRENT and future controllers are AFTER. GPS and manual handoff both update status without deleting earlier controllers.
