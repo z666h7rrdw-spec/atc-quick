@@ -1,3 +1,7 @@
+ATC Quick V57
+Adds a CURRENT controller card above Predicted Route. CURRENT advances with ATC handoffs.
+Preserves V56 airport/runway cards, destination-only Runway Wind, and V52 altitude-aware routing.
+
 ATC Quick V56
 Departure + destination cards now include elevation, runway length, and traffic pattern. Runway Wind remains destination-only.
 Home-screen hierarchy cleanup; routing engine preserved from V52/V53.

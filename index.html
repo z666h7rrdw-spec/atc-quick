@@ -55,6 +55,8 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 <div id="departureAirportCard" class="card" style="display:none"></div>
 <div id="gps" class="gps" style="display:none">Guidance loaded · GPS not started</div>
 
+<div id="currentControllerCard" class="card" style="display:none"></div>
+
 <div class="card">
   <div class="tag">PREDICTED ROUTE</div>
   <div id="sequence"></div>
@@ -72,7 +74,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 </div>
 
 <div class="card">
-  <div class="tag">V56 · FLIGHT TEST LOG</div>
+  <div class="tag">V57 · FLIGHT TEST LOG</div>
   <div id="log" class="muted">No handoffs logged yet.</div>
   <button class="secondary" style="margin-top:10px" onclick="copyLog()">Copy log</button>
 </div>
@@ -612,6 +614,7 @@ function render(){
  let routeGroups=groups.filter((g,gi)=>{
    // The first controller is displayed as Departure on the departure-airport card.
    if(gi===0)return false;
+   if(idx>=g.start)return false;
    // Local destination rows belong only in the destination card.
    let call=String(g.call||"").toUpperCase();
    if(/CTAF|TOWER/.test(call) && (call.includes(destId)||call.includes(destShort)))return false;
@@ -646,4 +649,4 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=52')}</script></body></html>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=57')}</script></body></html>
