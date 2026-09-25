@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V65</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V66</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -116,7 +116,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=65"></script><!-- ATC Quick V65 -->
+</main><script src="data.js?v=66"></script><!-- ATC Quick V66 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -179,6 +179,25 @@ function airportCardHTML(a,title,rowsOverride){
     </div>`;
   }).join("");
   let elev=Number(a.elev);
+  let contactHTML="";
+  if(a.use==="PR" && a.contacts){
+    let blocks=[];
+    for(const role of ["manager","owner"]){
+      const c=a.contacts[role]; if(!c)continue;
+      const phone=String(c.phone||"").trim();
+      const email=String(c.email||"").trim();
+      const addr=[c.address1,c.address2,[c.city,c.state].filter(Boolean).join(", "),c.zip].filter(Boolean).join(" · ");
+      blocks.push(`<div class="step" style="padding-top:10px;padding-bottom:10px">
+        <div class="tag" style="margin-bottom:4px">${role.toUpperCase()}</div>
+        ${c.name?`<div style="font-weight:800;font-size:16px">${c.name}</div>`:""}
+        ${phone?`<div style="margin-top:6px"><a href="tel:${phone.replace(/[^0-9+]/g,"")}" style="color:#78b9ff;font-weight:900;text-decoration:none;font-size:18px">${phone}</a></div>`:""}
+        ${email?`<div style="margin-top:5px;overflow-wrap:anywhere"><a href="mailto:${email}" style="color:#78b9ff;text-decoration:none;font-weight:700">${email}</a></div>`:""}
+        ${addr?`<div class="muted" style="font-size:13px;margin-top:5px;line-height:1.35">${addr}</div>`:""}
+      </div>`);
+    }
+    const remarks=(a.accessRemarks||[]).map(r=>`<div class="warn" style="font-size:13px;line-height:1.4;margin-top:7px">${r}</div>`).join("");
+    if(blocks.length||remarks)contactHTML=`<div class="tag" style="margin-top:14px">PRIVATE AIRPORT CONTACT</div>${blocks.join("")}${remarks}`;
+  }
   return `<div class="tag">${title} — ${a.id}</div>
     <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>
     ${a.status&&a.status!=="O"?`<div class="warn" style="font-weight:900;margin-bottom:8px">${a.status==="CI"?"CLOSED INDEFINITELY":a.status==="CP"?"CLOSED PERMANENTLY":"STATUS: "+a.status}</div>`:""}
@@ -186,7 +205,8 @@ function airportCardHTML(a,title,rowsOverride){
     ${a.military?`<div class="warn" style="font-weight:900;margin-bottom:8px">MILITARY FACILITY</div>`:""}
     ${Number.isFinite(elev)?`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Elevation</b><span style="font-weight:800;white-space:nowrap">${elev.toLocaleString()} ft MSL</span></div>`:""}
     ${runwayRows?`<div class="tag" style="margin-top:14px">RUNWAYS</div>${runwayRows}`:""}
-    ${freqRows?`<div class="tag" style="margin-top:14px">FREQUENCIES</div>${freqRows}`:""}`;
+    ${freqRows?`<div class="tag" style="margin-top:14px">FREQUENCIES</div>${freqRows}`:""}
+    ${contactHTML}`;
 }
 function runwayWindButtonHTML(a){
   if(!a || !Array.isArray(a.runways) || !a.runways.length)return "";

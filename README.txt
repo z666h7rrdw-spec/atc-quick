@@ -1,7 +1,7 @@
-ATC Quick V65
+ATC Quick V66
 
-Adds WHO CAN I CALL? — a current-GPS, no-route-required ATC estimate showing low-altitude nearby service candidates and a high-altitude (FL180+) center frequency. Preserves V63 route history (PASSED/CURRENT/AFTER), altitude-aware routing, airport cards, frequency lookup, and runway wind. Planning/awareness aid only; actual ATC assignment controls.
+Adds PRIVATE AIRPORT CONTACT details from the FAA NASR Airport Contact records for private-use facilities. When published, private airport cards can show the manager, owner, phone number, email address, mailing address, and relevant prior-permission/access remarks. Phone and email are tappable on mobile.
 
-V64 expands detailed airport/landing-facility coverage from 4,700 to the full FAA APT dataset, including private-use and military facilities, with runway/frequency data where published. Private and closed facilities are clearly labeled.
+Preserves V65 features: 8000 ft default cruise altitude, expanded FAA APT coverage including private/restricted facilities, WHO CAN I CALL?, PASSED/CURRENT/AFTER route history, altitude-aware routing, airport cards, frequency lookup, and runway wind.
 
-V65 defaults Cruise Altitude to 8000 ft. The value remains editable for any flight.
+Planning/awareness aid only. Contact details are from FAA NASR effective 03 SEP 2026 and can change; verify permission directly with the airport operator before using a private facility.
