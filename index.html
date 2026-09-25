@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V63</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V64</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -116,16 +116,21 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=62"></script><!-- ATC Quick V62 -->
+</main><script src="data.js?v=64"></script><!-- ATC Quick V64 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
 let AIRPORT_QUICK_DATA=[];
 fetch("airports.json").then(r=>r.json()).then(x=>{AIRPORT_QUICK_DATA=x;renderAirportCards();}).catch(()=>{});
 function aqAirport(id){
-  id=String(id||"").trim().toUpperCase();
-  if(id.length===3)id="K"+id;
-  return AIRPORT_QUICK_DATA.find(a=>String(a.id||"").toUpperCase()===id || String(a.faa||"").toUpperCase()===id.replace(/^K(?=[A-Z]{3}$)/,""));
+  const raw=String(id||"").trim().toUpperCase();
+  if(!raw)return null;
+  const ids=new Set([raw]);
+  // Only prepend K to three-letter alphabetic FAA identifiers (HBI -> KHBI).
+  // Do not alter identifiers such as W31, 0A4, 2NC0, etc.
+  if(/^[A-Z]{3}$/.test(raw))ids.add("K"+raw);
+  if(/^K[A-Z]{3}$/.test(raw))ids.add(raw.slice(1));
+  return AIRPORT_QUICK_DATA.find(a=>ids.has(String(a.id||"").toUpperCase()) || ids.has(String(a.faa||"").toUpperCase()))||null;
 }
 function compassForSector(start,end){
   start=Number(start); end=Number(end);
@@ -160,7 +165,7 @@ function airportCardHTML(a,title,rowsOverride){
   let runwayRows=(a.runways||[]).map(r=>{
     let rid=String(r.id||"");
     let len=Number(r.length);
-    let traffic=(r.ends||[]).map(e=>`${e.id} ${String(e.traffic||"").toUpperCase().startsWith("R")?"R":"L"}`).join(" · ");
+    let traffic=(r.ends||[]).map(e=>{let t=String(e.traffic||"").toUpperCase();return t.startsWith("R")?`${e.id} R`:t.startsWith("L")?`${e.id} L`:"";}).filter(Boolean).join(" · ");
     return `<div class="step" style="padding-top:10px;padding-bottom:10px">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Runway ${rid}</b><span style="font-weight:800;white-space:nowrap">${Number.isFinite(len)?len.toLocaleString()+" ft":""}</span></div>
       ${traffic?`<div class="muted" style="font-size:14px;margin-top:4px">Traffic: ${traffic}</div>`:""}
@@ -176,6 +181,9 @@ function airportCardHTML(a,title,rowsOverride){
   let elev=Number(a.elev);
   return `<div class="tag">${title} — ${a.id}</div>
     <div style="font-size:18px;font-weight:800;margin:4px 0 8px">${a.name||""}</div>
+    ${a.status&&a.status!=="O"?`<div class="warn" style="font-weight:900;margin-bottom:8px">${a.status==="CI"?"CLOSED INDEFINITELY":a.status==="CP"?"CLOSED PERMANENTLY":"STATUS: "+a.status}</div>`:""}
+    ${a.use==="PR"?`<div class="warn" style="font-weight:900;margin-bottom:8px">PRIVATE USE — PERMISSION REQUIRED</div>`:""}
+    ${a.military?`<div class="warn" style="font-weight:900;margin-bottom:8px">MILITARY FACILITY</div>`:""}
     ${Number.isFinite(elev)?`<div class="step" style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Elevation</b><span style="font-weight:800;white-space:nowrap">${elev.toLocaleString()} ft MSL</span></div>`:""}
     ${runwayRows?`<div class="tag" style="margin-top:14px">RUNWAYS</div>${runwayRows}`:""}
     ${freqRows?`<div class="tag" style="margin-top:14px">FREQUENCIES</div>${freqRows}`:""}`;
