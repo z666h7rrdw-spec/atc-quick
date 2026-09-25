@@ -37,13 +37,13 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V64</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V65</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
 <div><label>DESTINATION</label><input id="dest" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('dest')"></div><div id="destResults" class="searchResults full"></div>
 <div class="full"><label>WAYPOINTS — SPACE SEPARATED</label><input id="wps" value="" autocomplete="off" autocapitalize="characters" oninput="showFixResults()"></div><div id="fixResults" class="searchResults full"></div>
-<div class="full"><label>CRUISE ALTITUDE</label><input id="alt" value="" inputmode="numeric"></div>
+<div class="full"><label>CRUISE ALTITUDE</label><input id="alt" value="8000" inputmode="numeric"></div>
 <div class="full"><button onclick="buildRoute()" style="padding:16px;font-size:19px;font-weight:900">GET ATC GUIDANCE</button></div>
 </div></div>
 <div style="margin-top:18px;text-align:center">
@@ -116,7 +116,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=64"></script><!-- ATC Quick V64 -->
+</main><script src="data.js?v=65"></script><!-- ATC Quick V65 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
