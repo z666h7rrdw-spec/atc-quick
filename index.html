@@ -111,7 +111,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:620px;margin:24px auto">
     <div class="tag">FLY-IN FOOD</div>
     <div style="font-size:22px;font-weight:900;margin-top:4px">Airport Restaurants</div>
-    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants plus OFF FIELD restaurants within 5 miles of a public-use airport. Virginia, North Carolina and South Carolina preload automatically; other states load OFF FIELD only when you tap them. Results cache on this device for up to one year.</div>
+    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants. Tap a state to view them. OFF FIELD restaurants within 5 miles load only after you tap OFF FIELD inside that state. Results cache on this device for up to one year.</div>
     <div id="foodStateView"></div>
     <div id="foodListView" class="hidden"></div>
     <button class="secondary" style="margin-top:14px" onclick="closeFlyInFood()">Close</button>
@@ -838,7 +838,7 @@ const FLY_IN_FOOD = [
 ];
 const FOOD_STATE_NAMES={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
 
-// V85 — nationwide ON-FIELD + click-to-load OFF-FIELD restaurant loader; 1-year device cache.
+// V86 — nationwide ON-FIELD state counts + strictly click-to-load OFF-FIELD restaurants; 1-year device cache.
 // Source: Fly2Lunch's live "on airport" search. We use the local FAA airport database to pick
 // enough search origins to cover each state's airports, then filter results back to that state.
 // Results are cached per state so subsequent openings are immediate. The older hand-checked
@@ -854,13 +854,13 @@ let foodDirectFetchAllowed=true;
 let foodJinaChain=Promise.resolve();
 let foodJinaNextAt=0;
 
-// V85 OFF FIELD — OpenStreetMap/Overpass restaurants within 5 statute miles, matching the app's museum proximity rule.
-// VA / NC / SC preload automatically. All other states stay click-to-load so the app does not download a huge nationwide dataset.
+// V86 OFF FIELD — OpenStreetMap/Overpass restaurants within 5 statute miles.
+// OFF FIELD never preloads. A state is fetched only after the user opens that state and taps OFF FIELD.
 const FOOD_OFF_RADIUS_MI=5;
 const FOOD_OFF_RADIUS_M=Math.round(FOOD_OFF_RADIUS_MI*1609.344);
 const FOOD_OFF_CACHE_PREFIX='atcquick_food_offfield_v85_';
 const FOOD_OFF_CACHE_TTL=365*24*60*60*1000;
-const FOOD_OFF_PRELOAD=['VA','NC','SC'];
+const FOOD_OFF_PRELOAD=[];
 const FOOD_OFF_BY_STATE={};
 const FOOD_OFF_STATUS={};
 const FOOD_OFF_PROMISE={};
@@ -1193,7 +1193,6 @@ function openFlyInFood(){
   }
   renderFoodStates();
   setTimeout(()=>loadAllFoodStates(),50);
-  setTimeout(()=>preloadPriorityOffFood(),600);
 }
 function closeFlyInFood(){ $('flyInFoodPanel').classList.add('hidden'); }
 function renderFoodStates(keepCode=false){
@@ -1204,15 +1203,11 @@ function renderFoodStates(keepCode=false){
   const done=codes.filter(c=>FOOD_LOAD_STATUS[c]==='done').length;
   const total=foodDedupe(codes.flatMap(c=>foodRowsForState(c))).length;
   const errors=codes.filter(c=>FOOD_LOAD_STATUS[c]==='error').length;
-  const offDone=codes.filter(c=>FOOD_OFF_STATUS[c]==='done').length;
-  const offTotal=codes.reduce((n,c)=>n+foodOffRowsForState(c).length,0);
-  const status=`<div class="card" style="margin:0 0 12px;padding:11px"><b>ON FIELD nationwide</b><div class="muted" style="font-size:12px;margin-top:3px">${done}/50 states loaded · ${total} restaurant${total===1?'':'s'}${errors?` · ${errors} state${errors===1?'':'s'} will retry when opened`:''}</div><div style="height:1px;background:#203247;margin:8px 0"></div><b>OFF FIELD ≤ ${FOOD_OFF_RADIUS_MI} mi</b><div class="muted" style="font-size:12px;margin-top:3px">VA · NC · SC preload automatically · ${offDone} state${offDone===1?'':'s'} cached · ${offTotal} nearby restaurant${offTotal===1?'':'s'} · other states load when tapped</div></div>`;
+  const status=`<div class="card" style="margin:0 0 12px;padding:11px"><b>ON FIELD nationwide</b><div class="muted" style="font-size:12px;margin-top:3px">${done}/50 states loaded · ${total} restaurant${total===1?'':'s'}${errors?` · ${errors} state${errors===1?'':'s'} will retry when opened`:''}</div></div>`;
   $('foodStateView').innerHTML=status+`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{
     const rows=foodRowsForState(code), st=FOOD_LOAD_STATUS[code]||'queued';
-    const off=foodOffRowsForState(code), ost=FOOD_OFF_STATUS[code]||'idle';
-    let tail=st==='done'?`${rows.length} on`:st==='loading'?'on loading…':st==='error'?'on retry':'on queued';
-    let offTail=ost==='done'?`${off.length} off`:ost==='loading'?'off loading…':ost==='error'?'off retry':FOOD_OFF_PRELOAD.includes(code)?'off preload':'off tap';
-    return `<button class="secondary" onclick="showFoodState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${FOOD_STATE_NAMES[code]} · ${tail} · ${offTail}</div></button>`;
+    let tail=st==='done'?`${rows.length}`:st==='loading'?'loading…':st==='error'?'retry':'queued';
+    return `<button class="secondary" onclick="showFoodState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${FOOD_STATE_NAMES[code]} · ${tail}</div></button>`;
   }).join('')}</div>`;
 }
 function foodRestaurantCard(r,mode='on'){
@@ -1247,8 +1242,7 @@ function showFoodState(code,fromRefresh=false,mode=foodMode){
   }else if(st==='loading'){
     body=`<div class="card" style="padding:16px;margin-top:10px"><b>Loading ${foodEsc(FOOD_STATE_NAMES[code])} ${isOff?'off-field':'on-field'} restaurants…</b><div class="muted" style="font-size:12px;margin-top:5px">${isOff?`Searching OpenStreetMap around public-use airports within ${FOOD_OFF_RADIUS_MI} miles. This state will be cached for one year.`:'This uses the live Fly2Lunch on-airport search. Results will be cached after the first load.'}</div></div>`;
   }else if(isOff && (st==='idle')){
-    const auto=FOOD_OFF_PRELOAD.includes(code);
-    body=`<div class="card" style="padding:16px;margin-top:10px"><b>${auto?'Preparing':'Load'} ${foodEsc(FOOD_STATE_NAMES[code])} off-field restaurants</b><div class="muted" style="font-size:12px;margin-top:5px">Only restaurants within ${FOOD_OFF_RADIUS_MI} miles of an open public-use airport are included. ${auto?'VA, NC and SC are set to preload automatically.':'This state stays unloaded until you request it.'}</div><button onclick="loadOffFoodState('${code}')" style="margin-top:10px">Load ${code} OFF FIELD</button></div>`;
+    body=`<div class="card" style="padding:16px;margin-top:10px"><b>Load ${foodEsc(FOOD_STATE_NAMES[code])} off-field restaurants</b><div class="muted" style="font-size:12px;margin-top:5px">Nothing loads in the background. Tap below to search restaurants within ${FOOD_OFF_RADIUS_MI} miles of open public-use airports in this state. Results cache for one year.</div><button onclick="loadOffFoodState('${code}')" style="margin-top:10px">Load ${code} OFF FIELD</button></div>`;
   }else if(st==='error'){
     body=`<div class="card" style="padding:16px;margin-top:10px"><b>Live source did not respond.</b><div class="muted" style="font-size:12px;margin-top:5px">Tap Retry. Cached entries remain available.</div><button onclick="${isOff?`FOOD_OFF_STATUS['${code}']='idle';loadOffFoodState('${code}')`:`FOOD_LOAD_STATUS['${code}']='queued';loadFoodState('${code}')`}" style="margin-top:10px">Retry ${code}</button></div>`;
   }else{
@@ -1256,7 +1250,6 @@ function showFoodState(code,fromRefresh=false,mode=foodMode){
   }
   $('foodListView').innerHTML=`<button class="secondary" onclick="renderFoodStates()" style="width:auto;padding:9px 14px;margin-bottom:10px">← States</button><div style="font-size:20px;font-weight:900;margin:2px 0 8px">${foodEsc(FOOD_STATE_NAMES[code])}</div>${modeControls}${body}`;
   if(!fromRefresh){
-    if(isOff && st!=='done' && !FOOD_OFF_PROMISE[code]) loadOffFoodState(code);
     if(!isOff && st!=='done' && !FOOD_LOAD_PROMISE[code]) loadFoodState(code);
   }
 }

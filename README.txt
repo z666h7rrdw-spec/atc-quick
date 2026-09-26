@@ -83,3 +83,11 @@ V85 nationwide ON-FIELD restaurant build:
 
 
 V85: Added OFF FIELD restaurant mode within 5 miles of open public-use airports. VA/NC/SC preload automatically; all other states are click-to-load. OFF FIELD source is OpenStreetMap via Overpass and caches per state for one year.
+
+
+V86 restaurant UI / loading change:
+- State browser now shows ON-FIELD count only.
+- Removed OFF-FIELD status/count text from every state tile and the nationwide summary.
+- OFF-FIELD restaurants never preload in the background, including VA/NC/SC.
+- Open a state, then tap OFF FIELD and Load to fetch that state's nearby restaurants.
+- Existing one-year OFF-FIELD cache is preserved.
