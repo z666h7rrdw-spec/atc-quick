@@ -1,5 +1,5 @@
-const C='atc-quick-v79';
-const F=['./data.js?v=79','./airports.json','./manifest.json','./icon-192.png','./icon-512.png'];
+const C='atc-quick-v80';
+const F=['./data.js?v=80','./airports.json','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',e=>{
   self.skipWaiting();

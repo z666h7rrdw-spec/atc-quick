@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V79</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V80</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -122,7 +122,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:620px;margin:24px auto">
     <div class="tag">MUSEUMS</div>
     <div style="font-size:22px;font-weight:900;margin-top:4px">Fly-In Museums</div>
-    <div class="muted" style="margin:6px 0 14px">Choose a state, then switch between museums on the airport and museums within 5 miles.</div>
+    <div class="muted" style="margin:6px 0 14px">Same 5-mile rule nationwide. Counts load automatically for every state; no state-by-state lookup.</div>
     <div id="museumStateView"></div>
     <div id="museumListView" class="hidden"></div>
     <button class="secondary" style="margin-top:14px" onclick="closeFlyInMuseums()">Close</button>
@@ -142,7 +142,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=79"></script><!-- ATC Quick V79 -->
+</main><script src="data.js?v=80"></script><!-- ATC Quick V80 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -757,7 +757,7 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=79',{updateViaCache:'none'})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=80',{updateViaCache:'none'})}
 // V68 — Fly-In Food on/off-field filtering test. Kept separate from route planning to avoid cockpit clutter.
 const FLY_IN_FOOD = [
   {state:"NC",airport:"RDU",airportName:"Raleigh-Durham Intl",restaurant:"Crosswinds Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
@@ -1010,46 +1010,207 @@ const FLY_IN_MUSEUMS = [
   {state:"WY",airport:"GEY",airportName:"South Big Horn County",museum:"Museum of Flight and Aerial Firefighting",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"}
 ];
 const MUSEUM_STATE_NAMES=FOOD_STATE_NAMES;
+const MUSEUM_LIVE_CACHE={};
+const MUSEUM_STATE_COUNTS={};
 let museumMode="ON FIELD";
 let museumStateCode=null;
+let MUSEUM_AIRPORT_GRID=null;
+let MUSEUM_NATIONAL_STATUS="idle";
+let MUSEUM_NATIONAL_ERROR="";
+let MUSEUM_NATIONAL_PROMISE=null;
+const MUSEUM_GRID_STEP=.5;
+const MUSEUM_CACHE_KEY="atcquick-v80-museums-2015-nohsc";
+
+function museumNorm(s){return String(s||"").toUpperCase().replace(/&/g,"AND").replace(/[^A-Z0-9]+/g," ").trim();}
+function museumMiles(a,b,c,d){
+  const R=3958.7613,rad=Math.PI/180;
+  const p1=a*rad,p2=c*rad,dp=(c-a)*rad,dl=(d-b)*rad;
+  const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+function museumAirportCoord(a){
+  const raw=[a&&a.faa,a&&a.id].filter(Boolean).map(x=>String(x).toUpperCase());
+  const ids=[];
+  for(const x of raw){
+    if(!ids.includes(x))ids.push(x);
+    if(/^K[A-Z]{3}$/.test(x)&&!ids.includes(x.slice(1)))ids.push(x.slice(1));
+    if(/^[A-Z]{3}$/.test(x)&&!ids.includes("K"+x))ids.push("K"+x);
+  }
+  for(const id of ids){
+    const q=(ATC_DATA.airports||{})[id];
+    if(Array.isArray(q)&&Number.isFinite(Number(q[0]))&&Number.isFinite(Number(q[1])))return {lat:Number(q[0]),lon:Number(q[1])};
+  }
+  return null;
+}
+function buildMuseumAirportGrid(){
+  if(MUSEUM_AIRPORT_GRID)return MUSEUM_AIRPORT_GRID;
+  const grid=new Map();
+  for(const a of (AIRPORT_QUICK_DATA||[])){
+    if(!a||a.siteType!=="A"||a.status!=="O"||a.use!=="PU"||a.military)continue;
+    const q=museumAirportCoord(a); if(!q)continue;
+    let ident=String(a.faa||a.id||"").toUpperCase();
+    if(/^K[A-Z]{3}$/.test(ident))ident=ident.slice(1);
+    if(!ident)continue;
+    const gx=Math.floor((q.lat+90)/MUSEUM_GRID_STEP),gy=Math.floor((q.lon+180)/MUSEUM_GRID_STEP),k=gx+","+gy;
+    if(!grid.has(k))grid.set(k,[]);
+    grid.get(k).push({airport:ident,airportName:a.name||ident,state:String(a.state||"").toUpperCase(),lat:q.lat,lon:q.lon});
+  }
+  MUSEUM_AIRPORT_GRID=grid;
+  return grid;
+}
+async function waitMuseumAirportData(){
+  for(let i=0;i<60;i++){
+    if((AIRPORT_QUICK_DATA||[]).length){buildMuseumAirportGrid();return true;}
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
+function nearestMuseumAirport(lat,lon,maxMiles=5){
+  const grid=buildMuseumAirportGrid();
+  const gx=Math.floor((lat+90)/MUSEUM_GRID_STEP),gy=Math.floor((lon+180)/MUSEUM_GRID_STEP);
+  let best=null;
+  for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){
+    const arr=grid.get((gx+dx)+","+(gy+dy))||[];
+    for(const a of arr){
+      const d=museumMiles(lat,lon,a.lat,a.lon);
+      if(d<=maxMiles&&(!best||d<best.distance))best={...a,distance:d};
+    }
+  }
+  return best;
+}
+function museumCuratedState(code,kind){return FLY_IN_MUSEUMS.filter(x=>x.state===code&&(!kind||x.kind===kind));}
+function museumSafeUrl(u){
+  u=String(u||"").trim(); if(!u)return "";
+  if(!/^https?:\/\//i.test(u))u="https://"+u;
+  return /^https?:\/\//i.test(u)?u:"";
+}
+function museumEscape(s){return String(s??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;"}[c]));}
+function museumStateRows(code){
+  if(museumMode==="ON FIELD")return museumCuratedState(code,"ON FIELD").slice().sort((a,b)=>a.airport.localeCompare(b.airport)||a.museum.localeCompare(b.museum));
+  const dynamic=(MUSEUM_LIVE_CACHE[code]?.rows||[]);
+  if(dynamic.length)return dynamic.slice().sort((a,b)=>a.airport.localeCompare(b.airport)||Number(a.distance||0)-Number(b.distance||0)||a.museum.localeCompare(b.museum));
+  return museumCuratedState(code,"OFF FIELD").filter(x=>Number(x.distance||0)<=5).slice().sort((a,b)=>a.airport.localeCompare(b.airport)||Number(a.distance||0)-Number(b.distance||0)||a.museum.localeCompare(b.museum));
+}
+function museumComputeCounts(){
+  for(const code of Object.keys(MUSEUM_STATE_NAMES)){
+    const on=museumCuratedState(code,"ON FIELD").length;
+    const off=(MUSEUM_LIVE_CACHE[code]?.rows||museumCuratedState(code,"OFF FIELD").filter(x=>Number(x.distance||0)<=5)).length;
+    MUSEUM_STATE_COUNTS[code]=on+off;
+  }
+}
+function museumSaveLocalCache(){
+  try{
+    const byState={};
+    for(const code of Object.keys(MUSEUM_STATE_NAMES))if(MUSEUM_LIVE_CACHE[code]?.rows)byState[code]=MUSEUM_LIVE_CACHE[code].rows;
+    localStorage.setItem(MUSEUM_CACHE_KEY,JSON.stringify({v:80,at:Date.now(),byState}));
+  }catch(e){}
+}
+function museumLoadLocalCache(){
+  try{
+    const raw=localStorage.getItem(MUSEUM_CACHE_KEY); if(!raw)return false;
+    const parsed=JSON.parse(raw); if(!parsed||parsed.v!==80||!parsed.byState)return false;
+    for(const [code,rows] of Object.entries(parsed.byState))MUSEUM_LIVE_CACHE[code]={rows:Array.isArray(rows)?rows:[],live:true,cached:true,error:""};
+    museumComputeCounts();
+    MUSEUM_NATIONAL_STATUS="ready";
+    return true;
+  }catch(e){return false;}
+}
+async function fetchNationwideMuseumData(){
+  if(MUSEUM_NATIONAL_STATUS==="ready")return true;
+  if(MUSEUM_NATIONAL_PROMISE)return MUSEUM_NATIONAL_PROMISE;
+  MUSEUM_NATIONAL_PROMISE=(async()=>{
+    MUSEUM_NATIONAL_STATUS="loading"; MUSEUM_NATIONAL_ERROR="";
+    if(!await waitMuseumAirportData())throw new Error("Airport database is still loading.");
+    const sql="SELECT commonname,legalname,phcity,adcity,phone,weburl,latitude,longitude,discipl FROM mudf15q1pub WHERE latitude IS NOT NULL AND longitude IS NOT NULL LIMIT 50000";
+    const url="https://imls.cartodb.com/api/v2/sql?q="+encodeURIComponent(sql);
+    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),30000);
+    let data;
+    try{
+      const resp=await fetch(url,{cache:"no-store",signal:ctl.signal});
+      if(!resp.ok)throw new Error("Museum source returned "+resp.status);
+      data=await resp.json();
+    }finally{clearTimeout(timer);}
+    const byState={}; const seen={}; const curatedNames={};
+    for(const code of Object.keys(MUSEUM_STATE_NAMES)){
+      byState[code]=[]; seen[code]=new Set();
+      curatedNames[code]=new Set(museumCuratedState(code,"ON FIELD").map(x=>museumNorm(x.museum)));
+    }
+    for(const r of (data.rows||[])){
+      const discipline=String(r.discipl||"").trim().toUpperCase();
+      if(discipline==="HSC")continue; // historical-society/preservation organizations are often not actual visitable museums
+      const lat=Number(r.latitude),lon=Number(r.longitude); if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
+      const museum=String(r.commonname||r.legalname||"").trim(); if(!museum)continue;
+      const near=nearestMuseumAirport(lat,lon,5); if(!near||!MUSEUM_STATE_NAMES[near.state])continue;
+      const code=near.state;
+      if(curatedNames[code].has(museumNorm(museum)))continue;
+      const key=museumNorm(museum)+"|"+near.airport;
+      if(seen[code].has(key))continue; seen[code].add(key);
+      byState[code].push({state:code,airport:near.airport,airportName:near.airportName,museum,kind:"OFF FIELD",distance:near.distance,source:"IMLS Museum Universe Data File (nationwide proximity search)",phone:String(r.phone||"").trim(),website:museumSafeUrl(r.weburl),city:String(r.phcity||r.adcity||"").trim(),discipline});
+    }
+    // Keep our hand-checked nearby records too, in case the historical national file does not contain them.
+    for(const code of Object.keys(MUSEUM_STATE_NAMES)){
+      for(const r of museumCuratedState(code,"OFF FIELD")){
+        if(Number(r.distance||0)>5)continue;
+        const key=museumNorm(r.museum)+"|"+r.airport;
+        if(!seen[code].has(key)){seen[code].add(key);byState[code].push({...r});}
+      }
+      byState[code].sort((a,b)=>a.airport.localeCompare(b.airport)||Number(a.distance||0)-Number(b.distance||0)||a.museum.localeCompare(b.museum));
+      MUSEUM_LIVE_CACHE[code]={rows:byState[code],live:true,cached:false,error:""};
+    }
+    museumComputeCounts(); museumSaveLocalCache();
+    MUSEUM_NATIONAL_STATUS="ready";
+    if(!$('flyInMuseumPanel').classList.contains('hidden')){
+      if(museumStateCode)showMuseumState(museumStateCode); else renderMuseumStates();
+    }
+    return true;
+  })().catch(e=>{
+    MUSEUM_NATIONAL_STATUS="error";
+    MUSEUM_NATIONAL_ERROR=e&&e.message?e.message:"Nationwide museum lookup unavailable.";
+    museumComputeCounts();
+    if(!$('flyInMuseumPanel').classList.contains('hidden')){
+      if(museumStateCode)showMuseumState(museumStateCode); else renderMuseumStates();
+    }
+    return false;
+  }).finally(()=>{MUSEUM_NATIONAL_PROMISE=null;});
+  return MUSEUM_NATIONAL_PROMISE;
+}
 function openFlyInMuseums(){
   $("flyInMuseumPanel").classList.remove("hidden");
+  if(!museumLoadLocalCache())museumComputeCounts();
   renderMuseumStates();
+  if(MUSEUM_NATIONAL_STATUS!=="ready")fetchNationwideMuseumData();
 }
 function closeFlyInMuseums(){ $("flyInMuseumPanel").classList.add("hidden"); }
 function renderMuseumStates(){
-  const loaded=new Set(FLY_IN_MUSEUMS.map(x=>x.state));
   const codes=Object.keys(MUSEUM_STATE_NAMES);
   museumStateCode=null;
   $("museumListView").classList.add("hidden");
   $("museumStateView").classList.remove("hidden");
-  $("museumStateView").innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{const n=FLY_IN_MUSEUMS.filter(x=>x.state===code).length;return `<button class="secondary" ${loaded.has(code)?`onclick="showMuseumState('${code}')"`:''} style="padding:11px 9px;${loaded.has(code)?'':'opacity:.38'}"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${MUSEUM_STATE_NAMES[code]}${n?` · ${n}`:' · coming soon'}</div></button>`}).join('')}</div>`;
+  const status=MUSEUM_NATIONAL_STATUS==="ready"
+    ?`<div class="muted" style="font-size:11px;line-height:1.4;margin:0 0 10px">Same nationwide rule: verified ON FIELD museums plus other museums within 5 miles of an open public-use airport. Counts are loaded for every state.</div>`
+    :MUSEUM_NATIONAL_STATUS==="error"
+      ?`<div class="warn" style="font-size:11px;line-height:1.4;margin:0 0 10px">Nationwide museum data could not load (${museumEscape(MUSEUM_NATIONAL_ERROR)}). Showing the smaller offline list for now.</div>`
+      :`<div class="muted" style="font-size:11px;line-height:1.4;margin:0 0 10px">Loading the same nationwide museum rule for every state… counts update automatically; no state-by-state loading.</div>`;
+  $("museumStateView").innerHTML=status+`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{const n=MUSEUM_STATE_COUNTS[code]??0;return `<button class="secondary" onclick="showMuseumState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${MUSEUM_STATE_NAMES[code]} · ${n}${MUSEUM_NATIONAL_STATUS==="loading"?' +':''}</div></button>`}).join('')}</div><div class="muted" style="font-size:10px;line-height:1.35;margin-top:12px">Nationwide discovery source: IMLS Museum Universe Data File (historical). Verify current museum status, hours, airport access and transportation before flight.</div>`;
 }
-function setMuseumMode(mode){
-  museumMode=mode;
-  if(museumStateCode) showMuseumState(museumStateCode);
-}
-function museumRowsForState(code){
-  return FLY_IN_MUSEUMS.filter(x=>{
-    if(x.state!==code) return false;
-    if(museumMode==="ON FIELD") return x.kind==="ON FIELD";
-    return x.kind==="OFF FIELD" && Number(x.distance||0)<=5;
-  }).sort((a,b)=>a.airport.localeCompare(b.airport)||Number(a.distance||0)-Number(b.distance||0)||a.museum.localeCompare(b.museum));
-}
+function setMuseumMode(mode){museumMode=mode;if(museumStateCode)showMuseumState(museumStateCode);}
 function showMuseumState(code){
   museumStateCode=code;
-  const rows=museumRowsForState(code);
+  const rows=museumStateRows(code);
   $("museumStateView").classList.add("hidden");
   $("museumListView").classList.remove("hidden");
-  const onActive=museumMode==="ON FIELD";
-  const offActive=!onActive;
-  const modeControls=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px">
-    <button onclick="setMuseumMode('ON FIELD')" style="padding:11px;background:${onActive?'#1976d2':'#14283d'};border:${onActive?'0':'1px solid #29445f'}">ON FIELD</button>
-    <button onclick="setMuseumMode('OFF FIELD')" style="padding:11px;background:${offActive?'#1976d2':'#14283d'};border:${offActive?'0':'1px solid #29445f'}">OFF FIELD</button>
-  </div>`;
-  const distanceNote=offActive?`<div class="muted" style="font-size:11px;font-weight:800;margin:4px 0 10px">SHOWING MUSEUMS WITHIN 5 MILES OF THE AIRPORT</div>`:'';
-  const list=rows.length?rows.map(r=>`<div class="step"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><b style="font-size:18px">${r.airport}</b> · ${r.airportName}<div style="font-size:18px;font-weight:850;margin-top:4px">${r.museum}</div>${r.kind==="OFF FIELD"?`<div class="muted" style="font-size:13px;margin-top:3px">${Number(r.distance).toFixed(1)} mi from airport</div>`:''}${r.rating?`<div class="muted" style="font-size:13px;margin-top:3px">${r.rating.toFixed(1)}★${r.reviews?` · ${r.reviews} reviews`:''}</div>`:''}${r.phone?`<div style="font-size:13px;margin-top:3px"><a href="tel:${r.phone.replace(/[^0-9+]/g,'')}" style="color:#8ec5ff;text-decoration:none">${r.phone}</a></div>`:''}</div><span class="pill" style="white-space:nowrap">${r.kind}</span></div><div class="muted" style="font-size:11px;margin-top:6px">Listing source: ${r.source} · Verify hours, ground access and transportation before flight.</div></div>`).join(''):`<div class="muted" style="padding:18px 4px">No ${museumMode.toLowerCase()} museums loaded for this filter yet.</div>`;
-  $("museumListView").innerHTML=`<button class="secondary" onclick="renderMuseumStates()" style="width:auto;padding:9px 14px;margin-bottom:10px">← States</button><div style="font-size:20px;font-weight:900;margin:2px 0 8px">${MUSEUM_STATE_NAMES[code]}</div>${modeControls}${distanceNote}${list}`;
+  const onActive=museumMode==="ON FIELD",offActive=!onActive;
+  const modeControls=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px"><button onclick="setMuseumMode('ON FIELD')" style="padding:11px;background:${onActive?'#1976d2':'#14283d'};border:${onActive?'0':'1px solid #29445f'}">ON FIELD</button><button onclick="setMuseumMode('OFF FIELD')" style="padding:11px;background:${offActive?'#1976d2':'#14283d'};border:${offActive?'0':'1px solid #29445f'}">OFF FIELD ≤ 5 MI</button></div>`;
+  let note='';
+  if(offActive&&MUSEUM_NATIONAL_STATUS==="loading")note=`<div class="muted" style="font-size:11px;font-weight:800;margin:4px 0 10px">NATIONWIDE LIST IS STILL LOADING — THIS STATE WILL REFRESH AUTOMATICALLY</div>`;
+  else if(offActive&&MUSEUM_NATIONAL_STATUS==="error")note=`<div class="warn" style="font-size:11px;line-height:1.4;margin:4px 0 10px">Nationwide source unavailable. Showing the smaller verified offline list.</div>`;
+  else if(offActive)note=`<div class="muted" style="font-size:11px;font-weight:800;margin:4px 0 10px">SHOWING MUSEUMS WITHIN 5 MILES OF AN OPEN PUBLIC-USE AIRPORT</div>`;
+  const list=rows.length?rows.map(r=>{
+    const web=museumSafeUrl(r.website||"");
+    return `<div class="step"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div style="min-width:0"><b style="font-size:18px">${museumEscape(r.airport)}</b> · ${museumEscape(r.airportName)}<div style="font-size:18px;font-weight:850;margin-top:4px">${museumEscape(r.museum)}</div>${r.kind==="OFF FIELD"?`<div class="muted" style="font-size:13px;margin-top:3px">${Number(r.distance).toFixed(1)} mi from airport${r.city?` · ${museumEscape(r.city)}`:''}</div>`:''}${r.phone?`<div style="font-size:13px;margin-top:3px"><a href="tel:${String(r.phone).replace(/[^0-9+]/g,'')}" style="color:#8ec5ff;text-decoration:none">${museumEscape(r.phone)}</a></div>`:''}${web?`<div style="font-size:13px;margin-top:3px"><a href="${museumEscape(web)}" target="_blank" rel="noopener" style="color:#8ec5ff;text-decoration:none">Website</a></div>`:''}</div><span class="pill" style="white-space:nowrap">${r.kind}</span></div><div class="muted" style="font-size:10px;margin-top:6px">Source: ${museumEscape(r.source||"museum directory")} · Verify current hours/status and ground transportation before flight.</div></div>`;
+  }).join(''):`<div class="muted" style="padding:18px 4px">No ${museumMode.toLowerCase()} museums found for this filter.</div>`;
+  $("museumListView").innerHTML=`<button class="secondary" onclick="renderMuseumStates()" style="width:auto;padding:9px 14px;margin-bottom:10px">← States</button><div style="font-size:20px;font-weight:900;margin:2px 0 8px">${MUSEUM_STATE_NAMES[code]} · ${MUSEUM_STATE_COUNTS[code]??rows.length}</div>${modeControls}${note}${list}`;
 }
+
 
 </script></body></html>

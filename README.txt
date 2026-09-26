@@ -56,3 +56,14 @@ V79 museum UI rollback/fix:
 - State tiles show the available museum count immediately; no per-state nationwide loading step.
 - Tapping a state immediately shows the museum list with ON FIELD / OFF FIELD filters.
 - Preserved all other V78 ATC, airport, food, private-strip, runway and GPS features.
+
+
+V80 nationwide museum balance fix:
+- Fixes the uneven museum totals that made North Carolina look artificially far ahead of Virginia and other states.
+- Uses one nationwide IMLS Museum Universe lookup and the same rule for every state.
+- OFF FIELD = museum within 5 statute miles of an open, public-use, non-military FAA airport.
+- ON FIELD remains separately verified airport-property museums.
+- Nationwide counts load automatically for all states; no state-by-state "tap to load" step.
+- Results are cached locally after the first successful nationwide load so later openings are immediate.
+- Excludes IMLS HSC-only historical-society/preservation records to reduce organizations that are not actually visitable museums.
+- Keeps hand-checked museum entries as a fallback if the nationwide source is unavailable.
