@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V74</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V75</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -142,7 +142,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=74"></script><!-- ATC Quick V74 -->
+</main><script src="data.js?v=75"></script><!-- ATC Quick V75 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -757,7 +757,7 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=74',{updateViaCache:'none'})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=75',{updateViaCache:'none'})}
 // V68 — Fly-In Food on/off-field filtering test. Kept separate from route planning to avoid cockpit clutter.
 const FLY_IN_FOOD = [
   {state:"NC",airport:"RDU",airportName:"Raleigh-Durham Intl",restaurant:"Crosswinds Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
@@ -782,6 +782,47 @@ const FLY_IN_FOOD = [
   {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Sugar Shack Jamaican Restaurant",kind:"OFF FIELD",distance:0.8,source:"Yelp / business cross-check",rating:4.4,reviews:606,phone:"910-579-3844",price:"$$"},
   {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Ocean Isle Fish Company",kind:"OFF FIELD",distance:1.1,source:"Yelp / business cross-check",rating:3.7,reviews:537,phone:"910-575-5855",price:"$$"},
   {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Sharky's Waterfront Restaurant and Marina",kind:"OFF FIELD",distance:1.2,source:"Yelp / official-site cross-check",rating:4.0,reviews:868,phone:"910-579-9177",price:"$$"},
+  {state:"NC",airport:"AVL",airportName:"Asheville Regional",restaurant:"Sierra Nevada Brewery",kind:"OFF FIELD",distance:0.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"AVL",airportName:"Asheville Regional",restaurant:"Casa Torres Mexican Restaurant",kind:"OFF FIELD",distance:0.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"AVL",airportName:"Asheville Regional",restaurant:"Dunkin'",kind:"OFF FIELD",distance:0.4,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"AVL",airportName:"Asheville Regional",restaurant:"Blue Agave",kind:"OFF FIELD",distance:0.6,source:"Tripadvisor / business cross-check",rating:3.9,reviews:135,phone:"828-676-3101",price:"$$"},
+  {state:"NC",airport:"AVL",airportName:"Asheville Regional",restaurant:"Carrabba's Italian Grill",kind:"OFF FIELD",distance:0.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"AKH",airportName:"Gastonia Municipal",restaurant:"Marco's Pizza",kind:"OFF FIELD",distance:1.8,source:"Skyfarer / OpenStreetMap"},
+  {state:"NC",airport:"AKH",airportName:"Gastonia Municipal",restaurant:"China Restaurant",kind:"OFF FIELD",distance:1.8,source:"Skyfarer / OpenStreetMap"},
+  {state:"NC",airport:"AKH",airportName:"Gastonia Municipal",restaurant:"Hickory Tavern",kind:"OFF FIELD",distance:1.9,source:"Skyfarer / OpenStreetMap"},
+  {state:"NC",airport:"AKH",airportName:"Gastonia Municipal",restaurant:"McDonald's",kind:"OFF FIELD",distance:1.9,source:"Skyfarer / OpenStreetMap"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"El Azador",kind:"OFF FIELD",distance:0.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Anita's Mexican Restaurant",kind:"OFF FIELD",distance:1.1,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Warren's Hot Dogs",kind:"OFF FIELD",distance:1.2,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Coffee + Spice",kind:"OFF FIELD",distance:1.4,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"The Gold Post Cafe",kind:"OFF FIELD",distance:1.4,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Winslow's Deli, Tavern and Market",kind:"OFF FIELD",distance:1.6,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"McDonald's",kind:"OFF FIELD",distance:1.6,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"The Scullery",kind:"OFF FIELD",distance:1.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Starlight Cafe",kind:"OFF FIELD",distance:1.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Sup Dogs",kind:"OFF FIELD",distance:1.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Luna Pizza Cafe",kind:"OFF FIELD",distance:1.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Jack Brown's Beer & Burger Joint",kind:"OFF FIELD",distance:1.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Native Fine Diner",kind:"OFF FIELD",distance:1.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Mi Cabana Express & Cantina #5",kind:"OFF FIELD",distance:1.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"PGV",airportName:"Pitt-Greenville",restaurant:"Taco Bell",kind:"OFF FIELD",distance:1.9,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Carolina Grill",kind:"OFF FIELD",distance:0.9,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Beartown Bistro & Pizza Company",kind:"OFF FIELD",distance:0.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Subway",kind:"OFF FIELD",distance:0.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Domino's Pizza",kind:"OFF FIELD",distance:0.8,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Taqueria San Luis",kind:"OFF FIELD",distance:1.0,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Gina's Pizza",kind:"OFF FIELD",distance:1.1,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Hwy 55 Burgers, Shakes & Fries",kind:"OFF FIELD",distance:1.3,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Jersey Mike's Subs",kind:"OFF FIELD",distance:1.3,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Paula's Pizza & Italian Restaurant",kind:"OFF FIELD",distance:1.6,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Outback Steakhouse",kind:"OFF FIELD",distance:1.6,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"EWN",airportName:"Coastal Carolina Regional",restaurant:"Merchant's Grocery and Grill",kind:"OFF FIELD",distance:1.7,source:"Tripadvisor airport-nearby listing"},
+  {state:"NC",airport:"SOP",airportName:"Moore County",restaurant:"Whispering Pies Pizzeria",kind:"OFF FIELD",distance:0.7,source:"Airptgo airport-nearby listing"},
+  {state:"NC",airport:"SOP",airportName:"Moore County",restaurant:"No 1 China",kind:"OFF FIELD",distance:0.9,source:"Airptgo airport-nearby listing"},
+  {state:"NC",airport:"SOP",airportName:"Moore County",restaurant:"Whispering Woods Cafe",kind:"OFF FIELD",distance:0.9,source:"Airptgo airport-nearby listing"},
+  {state:"NC",airport:"SOP",airportName:"Moore County",restaurant:"Wisco Taco Foxtrot",kind:"OFF FIELD",distance:1.1,source:"Airptgo airport-nearby listing"},
+  {state:"NC",airport:"SOP",airportName:"Moore County",restaurant:"Roast",kind:"OFF FIELD",distance:1.1,source:"Airptgo airport-nearby listing"},
+  {state:"NC",airport:"SOP",airportName:"Moore County",restaurant:"Domino's Pizza",kind:"OFF FIELD",distance:1.1,source:"Airptgo airport-nearby listing"},
   {state:"VA",airport:"MTV",airportName:"Blue Ridge",restaurant:"Simply Suzannes Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
   {state:"VA",airport:"FCI",airportName:"Richmond Exec/Chesterfield County",restaurant:"King's Korner Restaurant",kind:"ON FIELD",source:"Fly2Lunch"},
   {state:"VA",airport:"EZF",airportName:"Shannon",restaurant:"Robins Nest",kind:"ON FIELD",source:"Fly2Lunch"},

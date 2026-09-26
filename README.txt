@@ -1,6 +1,6 @@
-ATC Quick V74
+ATC Quick V75
 
-Current base: V74
+Current base: V75
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -35,3 +35,8 @@ V74 cache fix:
 - Updated service-worker registration from stale v71 to v74.
 - updateViaCache:none and no-store navigation fetch reduce stale Home Screen builds.
 - Manifest start URL updated to v74.
+
+V75 North Carolina off-field restaurant expansion:
+- OFF FIELD remains fixed at 2 miles.
+- Added AVL, AKH, PGV, EWN and SOP restaurant groups.
+- NC now has a much larger airport-indexed off-field list.
