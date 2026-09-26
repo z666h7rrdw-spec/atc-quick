@@ -1,6 +1,6 @@
-ATC Quick V72
+ATC Quick V73
 
-Current base: V72
+Current base: V73
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -24,3 +24,8 @@ V72 NC food expansion:
 - Added more verified OFF FIELD NC entries (including HKY and 5W4).
 - Grouped restaurant results by airport so it is obvious when multiple airports are represented.
 - Added a summary count for restaurants and airports in the active filter.
+
+V73 food UI:
+- State counts now show ON-FIELD restaurant count only.
+- OFF FIELD is fixed at <=2 miles.
+- OFF FIELD lists airport identifiers first; tap an airport to see its nearby restaurants.
