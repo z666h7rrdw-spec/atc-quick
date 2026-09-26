@@ -58,7 +58,7 @@ V79 museum UI rollback/fix:
 - Preserved all other V78 ATC, airport, food, private-strip, runway and GPS features.
 
 
-V80 nationwide museum balance fix:
+V81 nationwide museum balance fix:
 - Fixes the uneven museum totals that made North Carolina look artificially far ahead of Virginia and other states.
 - Uses one nationwide IMLS Museum Universe lookup and the same rule for every state.
 - OFF FIELD = museum within 5 statute miles of an open, public-use, non-military FAA airport.
@@ -67,3 +67,6 @@ V80 nationwide museum balance fix:
 - Results are cached locally after the first successful nationwide load so later openings are immediate.
 - Excludes IMLS HSC-only historical-society/preservation records to reduce organizations that are not actually visitable museums.
 - Keeps hand-checked museum entries as a fallback if the nationwide source is unavailable.
+
+
+V81 museum fix: replaced the retired Carto museum endpoint with a stable nationwide CSV mirror plus fallback; changed cache key so old V80 museum counts cannot persist.

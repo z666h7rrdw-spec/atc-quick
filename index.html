@@ -122,7 +122,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:620px;margin:24px auto">
     <div class="tag">MUSEUMS</div>
     <div style="font-size:22px;font-weight:900;margin-top:4px">Fly-In Museums</div>
-    <div class="muted" style="margin:6px 0 14px">Same 5-mile rule nationwide. Counts load automatically for every state; no state-by-state lookup.</div>
+    <div class="muted" style="margin:6px 0 14px">Same 5-mile rule nationwide. Counts load automatically for every state from the nationwide museum directory.</div>
     <div id="museumStateView"></div>
     <div id="museumListView" class="hidden"></div>
     <button class="secondary" style="margin-top:14px" onclick="closeFlyInMuseums()">Close</button>
@@ -142,7 +142,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=80"></script><!-- ATC Quick V80 -->
+</main><script src="data.js?v=81"></script><!-- ATC Quick V81 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -1019,7 +1019,7 @@ let MUSEUM_NATIONAL_STATUS="idle";
 let MUSEUM_NATIONAL_ERROR="";
 let MUSEUM_NATIONAL_PROMISE=null;
 const MUSEUM_GRID_STEP=.5;
-const MUSEUM_CACHE_KEY="atcquick-v80-museums-2015-nohsc";
+const MUSEUM_CACHE_KEY="atcquick-v81-museums-tripadvisor-nearby";
 
 function museumNorm(s){return String(s||"").toUpperCase().replace(/&/g,"AND").replace(/[^A-Z0-9]+/g," ").trim();}
 function museumMiles(a,b,c,d){
@@ -1102,18 +1102,53 @@ function museumSaveLocalCache(){
   try{
     const byState={};
     for(const code of Object.keys(MUSEUM_STATE_NAMES))if(MUSEUM_LIVE_CACHE[code]?.rows)byState[code]=MUSEUM_LIVE_CACHE[code].rows;
-    localStorage.setItem(MUSEUM_CACHE_KEY,JSON.stringify({v:80,at:Date.now(),byState}));
+    localStorage.setItem(MUSEUM_CACHE_KEY,JSON.stringify({v:81,at:Date.now(),byState}));
   }catch(e){}
 }
 function museumLoadLocalCache(){
   try{
     const raw=localStorage.getItem(MUSEUM_CACHE_KEY); if(!raw)return false;
-    const parsed=JSON.parse(raw); if(!parsed||parsed.v!==80||!parsed.byState)return false;
+    const parsed=JSON.parse(raw); if(!parsed||parsed.v!==81||!parsed.byState)return false;
     for(const [code,rows] of Object.entries(parsed.byState))MUSEUM_LIVE_CACHE[code]={rows:Array.isArray(rows)?rows:[],live:true,cached:true,error:""};
     museumComputeCounts();
     MUSEUM_NATIONAL_STATUS="ready";
     return true;
   }catch(e){return false;}
+}
+function museumParseCSV(text){
+  const rows=[]; let row=[],field="",quoted=false;
+  text=String(text||"");
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(quoted){
+      if(ch==='"'){
+        if(text[i+1]==='"'){field+='"';i++;}
+        else quoted=false;
+      }else field+=ch;
+    }else{
+      if(ch==='"')quoted=true;
+      else if(ch===','){row.push(field);field="";}
+      else if(ch==='\n'){row.push(field);rows.push(row);row=[];field="";}
+      else if(ch!=='\r')field+=ch;
+    }
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  return rows;
+}
+async function museumFetchTextWithFallback(urls){
+  let lastErr=null;
+  for(const url of urls){
+    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),22000);
+    try{
+      const resp=await fetch(url,{cache:"no-store",signal:ctl.signal,mode:"cors"});
+      if(!resp.ok)throw new Error("Museum source returned "+resp.status);
+      const text=await resp.text();
+      if(text.length<10000)throw new Error("Museum source returned incomplete data");
+      return text;
+    }catch(e){lastErr=e;}
+    finally{clearTimeout(timer);}
+  }
+  throw lastErr||new Error("Nationwide museum source unavailable");
 }
 async function fetchNationwideMuseumData(){
   if(MUSEUM_NATIONAL_STATUS==="ready")return true;
@@ -1121,33 +1156,47 @@ async function fetchNationwideMuseumData(){
   MUSEUM_NATIONAL_PROMISE=(async()=>{
     MUSEUM_NATIONAL_STATUS="loading"; MUSEUM_NATIONAL_ERROR="";
     if(!await waitMuseumAirportData())throw new Error("Airport database is still loading.");
-    const sql="SELECT commonname,legalname,phcity,adcity,phone,weburl,latitude,longitude,discipl FROM mudf15q1pub WHERE latitude IS NOT NULL AND longitude IS NOT NULL LIMIT 50000";
-    const url="https://imls.cartodb.com/api/v2/sql?q="+encodeURIComponent(sql);
-    const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),30000);
-    let data;
-    try{
-      const resp=await fetch(url,{cache:"no-store",signal:ctl.signal});
-      if(!resp.ok)throw new Error("Museum source returned "+resp.status);
-      data=await resp.json();
-    }finally{clearTimeout(timer);}
+
+    // V81: use a stable nationwide museum CSV mirror instead of the retired Carto endpoint.
+    // The file is historical, so every result still carries a verify-current-status warning.
+    const csv=await museumFetchTextWithFallback([
+      "https://cdn.jsdelivr.net/gh/annecool37/MuseumRecommendation@master/Data/tripadvisor_museum_USonly.csv",
+      "https://raw.githubusercontent.com/annecool37/MuseumRecommendation/master/Data/tripadvisor_museum_USonly.csv"
+    ]);
+    const table=museumParseCSV(csv);
+    if(table.length<2)throw new Error("Nationwide museum file was empty.");
+    const headers=table[0].map(x=>String(x||"").trim());
+    const ix={}; headers.forEach((h,i)=>{if(h)ix[h]=i;});
+    for(const need of ["Address","Langtitude","Latitude","MuseumName"]){
+      if(ix[need]===undefined)throw new Error("Nationwide museum file format changed.");
+    }
+
     const byState={}; const seen={}; const curatedNames={};
     for(const code of Object.keys(MUSEUM_STATE_NAMES)){
       byState[code]=[]; seen[code]=new Set();
       curatedNames[code]=new Set(museumCuratedState(code,"ON FIELD").map(x=>museumNorm(x.museum)));
     }
-    for(const r of (data.rows||[])){
-      const discipline=String(r.discipl||"").trim().toUpperCase();
-      if(discipline==="HSC")continue; // historical-society/preservation organizations are often not actual visitable museums
-      const lat=Number(r.latitude),lon=Number(r.longitude); if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
-      const museum=String(r.commonname||r.legalname||"").trim(); if(!museum)continue;
+    for(let n=1;n<table.length;n++){
+      const r=table[n]; if(!r||r.length<5)continue;
+      const lat=Number(r[ix.Latitude]),lon=Number(r[ix.Langtitude]);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon))continue;
+      const museum=String(r[ix.MuseumName]||"").trim(); if(!museum)continue;
+      const address=String(r[ix.Address]||"").trim();
       const near=nearestMuseumAirport(lat,lon,5); if(!near||!MUSEUM_STATE_NAMES[near.state])continue;
       const code=near.state;
       if(curatedNames[code].has(museumNorm(museum)))continue;
       const key=museumNorm(museum)+"|"+near.airport;
       if(seen[code].has(key))continue; seen[code].add(key);
-      byState[code].push({state:code,airport:near.airport,airportName:near.airportName,museum,kind:"OFF FIELD",distance:near.distance,source:"IMLS Museum Universe Data File (nationwide proximity search)",phone:String(r.phone||"").trim(),website:museumSafeUrl(r.weburl),city:String(r.phcity||r.adcity||"").trim(),discipline});
+      const city=(address.split(',')[1]||'').trim();
+      byState[code].push({
+        state:code,airport:near.airport,airportName:near.airportName,museum,
+        kind:"OFF FIELD",distance:near.distance,
+        source:"Historical nationwide U.S. museum directory (TripAdvisor-derived mirror)",
+        phone:ix.PhoneNum===undefined?"":String(r[ix.PhoneNum]||"").trim(),
+        website:"",city
+      });
     }
-    // Keep our hand-checked nearby records too, in case the historical national file does not contain them.
+    // Keep our hand-checked nearby records too, including museums not present in the historical file.
     for(const code of Object.keys(MUSEUM_STATE_NAMES)){
       for(const r of museumCuratedState(code,"OFF FIELD")){
         if(Number(r.distance||0)>5)continue;
@@ -1159,7 +1208,7 @@ async function fetchNationwideMuseumData(){
     }
     museumComputeCounts(); museumSaveLocalCache();
     MUSEUM_NATIONAL_STATUS="ready";
-    if(!$('flyInMuseumPanel').classList.contains('hidden')){
+    if(!$("flyInMuseumPanel").classList.contains("hidden")){
       if(museumStateCode)showMuseumState(museumStateCode); else renderMuseumStates();
     }
     return true;
@@ -1167,7 +1216,7 @@ async function fetchNationwideMuseumData(){
     MUSEUM_NATIONAL_STATUS="error";
     MUSEUM_NATIONAL_ERROR=e&&e.message?e.message:"Nationwide museum lookup unavailable.";
     museumComputeCounts();
-    if(!$('flyInMuseumPanel').classList.contains('hidden')){
+    if(!$("flyInMuseumPanel").classList.contains("hidden")){
       if(museumStateCode)showMuseumState(museumStateCode); else renderMuseumStates();
     }
     return false;
@@ -1187,11 +1236,11 @@ function renderMuseumStates(){
   $("museumListView").classList.add("hidden");
   $("museumStateView").classList.remove("hidden");
   const status=MUSEUM_NATIONAL_STATUS==="ready"
-    ?`<div class="muted" style="font-size:11px;line-height:1.4;margin:0 0 10px">Same nationwide rule: verified ON FIELD museums plus other museums within 5 miles of an open public-use airport. Counts are loaded for every state.</div>`
+    ?`<div class="muted" style="font-size:11px;line-height:1.4;margin:0 0 10px">Same nationwide rule: verified ON FIELD museums plus other museums within 5 miles of an open public-use airport. Counts are loaded for every state from the nationwide directory.</div>`
     :MUSEUM_NATIONAL_STATUS==="error"
       ?`<div class="warn" style="font-size:11px;line-height:1.4;margin:0 0 10px">Nationwide museum data could not load (${museumEscape(MUSEUM_NATIONAL_ERROR)}). Showing the smaller offline list for now.</div>`
       :`<div class="muted" style="font-size:11px;line-height:1.4;margin:0 0 10px">Loading the same nationwide museum rule for every state… counts update automatically; no state-by-state loading.</div>`;
-  $("museumStateView").innerHTML=status+`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{const n=MUSEUM_STATE_COUNTS[code]??0;return `<button class="secondary" onclick="showMuseumState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${MUSEUM_STATE_NAMES[code]} · ${n}${MUSEUM_NATIONAL_STATUS==="loading"?' +':''}</div></button>`}).join('')}</div><div class="muted" style="font-size:10px;line-height:1.35;margin-top:12px">Nationwide discovery source: IMLS Museum Universe Data File (historical). Verify current museum status, hours, airport access and transportation before flight.</div>`;
+  $("museumStateView").innerHTML=status+`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{const n=MUSEUM_STATE_COUNTS[code]??0;return `<button class="secondary" onclick="showMuseumState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${MUSEUM_STATE_NAMES[code]} · ${n}${MUSEUM_NATIONAL_STATUS==="loading"?' +':''}</div></button>`}).join('')}</div><div class="muted" style="font-size:10px;line-height:1.35;margin-top:12px">Nationwide discovery source: historical U.S. museum directory mirror. Verify current museum status, hours, airport access and transportation before flight.</div>`;
 }
 function setMuseumMode(mode){museumMode=mode;if(museumStateCode)showMuseumState(museumStateCode);}
 function showMuseumState(code){
