@@ -1,6 +1,6 @@
-ATC Quick V77
+ATC Quick V78
 
-Current base: V77
+Current base: V78
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -40,3 +40,12 @@ V77 North Carolina off-field restaurant expansion:
 - OFF FIELD remains fixed at 2 miles.
 - Added AVL, AKH, PGV, EWN and SOP restaurant groups.
 - NC now has a much larger airport-indexed off-field list.
+
+V78 museum rebuild:
+- Replaced uneven state museum totals with one consistent nationwide lookup rule.
+- ON FIELD = separately verified airport-property museums.
+- OFF FIELD = museums from the IMLS Museum Universe Data File within 5 statute miles of an FAA airport.
+- All 50 states are active; a state count appears only after that state is actually checked.
+- OFF FIELD is grouped by airport identifier first, then museum list.
+- If the nationwide source is unavailable, the app falls back to the smaller curated offline list.
+- Core ATC, restaurant, airport, private-strip, runway and GPS features are unchanged.
