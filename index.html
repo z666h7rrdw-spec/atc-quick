@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V70</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V71</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -142,7 +142,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=70"></script><!-- ATC Quick V70 -->
+</main><script src="data.js?v=71"></script><!-- ATC Quick V71 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -757,7 +757,7 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=70')}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=71')}
 // V68 — Fly-In Food on/off-field filtering test. Kept separate from route planning to avoid cockpit clutter.
 const FLY_IN_FOOD = [
   {state:"NC",airport:"RDU",airportName:"Raleigh-Durham Intl",restaurant:"Crosswinds Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
@@ -770,6 +770,15 @@ const FLY_IN_FOOD = [
   {state:"NC",airport:"BQ1",airportName:"Gilliam-McConnell Airfield",restaurant:"The Pik-N-Pig",kind:"ON FIELD",source:"Fly2Lunch"},
   {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",restaurant:"Updraft Kitchen",kind:"ON FIELD",distance:0,source:"Fly2Lunch / Yelp cross-check",rating:4.7,reviews:85,phone:"336-648-8833",price:"$10–20"},
   {state:"NC",airport:"FQD",airportName:"Rutherford County/Marchman Fld",restaurant:"57 Alpha Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
+  {state:"NC",airport:"5W4",airportName:"P K Airpark",restaurant:"Aviators Grill & Pub",kind:"ON FIELD",distance:0,source:"Fly2Lunch",rating:3.6,phone:"910-904-6761"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Carmine's Italian Deli & Specialties",kind:"ON FIELD",distance:0,source:"Fly2Lunch"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Amelia's Bar & Grille",kind:"OFF FIELD",distance:0.5,source:"Yelp / business cross-check",rating:4.1,reviews:173,phone:"910-579-9200",price:"$$"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"MAYA Fine Food and Tequilas",kind:"OFF FIELD",distance:0.5,source:"Yelp / business cross-check",rating:4.5,reviews:103,phone:"910-575-0993",price:"$20–30"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"FEAST OIB",kind:"OFF FIELD",distance:0.5,source:"Yelp / business cross-check",rating:4.3,reviews:98,phone:"910-579-3663",price:"$$"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Causeway Gourmet",kind:"OFF FIELD",distance:0.7,source:"Yelp / business cross-check",rating:4.6,reviews:542,phone:"910-575-1084",price:"$10–20"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Sugar Shack Jamaican Restaurant",kind:"OFF FIELD",distance:0.8,source:"Yelp / business cross-check",rating:4.4,reviews:606,phone:"910-579-3844",price:"$$"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Ocean Isle Fish Company",kind:"OFF FIELD",distance:1.1,source:"Yelp / business cross-check",rating:3.7,reviews:537,phone:"910-575-5855",price:"$$"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",restaurant:"Sharky's Waterfront Restaurant and Marina",kind:"OFF FIELD",distance:1.2,source:"Yelp / official-site cross-check",rating:4.0,reviews:868,phone:"910-579-9177",price:"$$"},
   {state:"VA",airport:"MTV",airportName:"Blue Ridge",restaurant:"Simply Suzannes Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
   {state:"VA",airport:"FCI",airportName:"Richmond Exec/Chesterfield County",restaurant:"King's Korner Restaurant",kind:"ON FIELD",source:"Fly2Lunch"},
   {state:"VA",airport:"EZF",airportName:"Shannon",restaurant:"Robins Nest",kind:"ON FIELD",source:"Fly2Lunch"},
@@ -838,6 +847,11 @@ function showFoodState(code){
 // V70 — Museums. Broad museum category; not limited to places labeled "aviation museum".
 // OFF FIELD is limited to museums within 5 miles of the airport. Distances are approximate airport-to-destination distances unless a source publishes a more specific value.
 const FLY_IN_MUSEUMS = [
+  {state:"NC",airport:"HBI",airportName:"Asheboro Regional",museum:"North Carolina Aviation Museum and Hall of Fame",kind:"ON FIELD",distance:0,source:"FAA airport remarks / official museum",phone:"336-625-0170"},
+  {state:"NC",airport:"HKY",airportName:"Hickory Regional",museum:"Hickory Aviation Museum",kind:"ON FIELD",distance:0,source:"Official museum / Hickory Regional Airport",phone:"828-323-1963"},
+  {state:"NC",airport:"FFA",airportName:"First Flight",museum:"Wright Brothers National Memorial",kind:"ON FIELD",distance:0,source:"National Park Service",phone:"252-473-2111"},
+  {state:"NC",airport:"CLT",airportName:"Charlotte Douglas Intl",museum:"Sullenberger Aviation Museum",kind:"OFF FIELD",distance:4.9,source:"Official museum / business cross-check",rating:4.4,reviews:716,phone:"704-997-3770"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",museum:"Museum of Coastal Carolina",kind:"OFF FIELD",distance:1.4,source:"Official museum / business cross-check",rating:4.5,reviews:177,phone:"910-579-1016"},
   {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Andy Griffith Museum",kind:"OFF FIELD",distance:4.0,source:"Official site / Yelp cross-check",rating:4.3,reviews:1098,phone:"336-786-1604"},
   {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Mount Airy Museum of Regional History",kind:"OFF FIELD",distance:4.1,source:"Official site / Yelp cross-check",rating:4.6,reviews:159,phone:"336-786-4478"},
   {state:"NC",airport:"JNX",airportName:"Johnston Rgnl",museum:"Ava Gardner Museum",kind:"OFF FIELD",distance:3.3,source:"Johnston County tourism / web cross-check"},

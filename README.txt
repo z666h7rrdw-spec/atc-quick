@@ -1,21 +1,21 @@
-ATC Quick V70
+ATC Quick V71
 
-Current base: V70
+Current base: V71
 
-Preserved from V69/V68/V66:
+Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
 - GPS PASSED / CURRENT / AFTER route status
 - WHO CAN I CALL? GPS ATC lookup
 - Expanded public/private airport details and private-strip contacts
 - Default cruise altitude 8,000 ft
 - Fly-In Food state browser with ON FIELD / OFF FIELD filters
+- Museums state browser with ON FIELD / OFF FIELD filters
 
-V70 changes:
-- Renamed AVIATION MUSEUMS to MUSEUMS so the database can include any museum near an airport, regardless of how the venue is categorized.
-- Removed synthetic MWK Test Museum and Test restaurant.
-- Seeded real museum records near MWK, JNX, FQD and GMU.
-- Began real OFF FIELD restaurant database with JNX restaurants published within 1.1–1.6 miles of the airport.
-- OFF FIELD food filters remain <=1 mile and <=2 miles.
-- OFF FIELD museums remain <=5 miles.
+V71 North Carolina database build:
+- Expanded NC ON FIELD food listings, including JNX, BQ1, MWK, FQD, 5W4, 60J and RDU.
+- Added real NC OFF FIELD restaurant records near 60J with distance/rating/phone where available.
+- Added NC ON FIELD museum destinations at HBI, HKY and FFA.
+- Added NC OFF FIELD museum records at CLT and 60J, while preserving MWK, JNX and FQD entries.
+- Removed no working features from V70.
 
 Restaurant and museum listings are convenience data. Verify current hours, access, transportation and operating status before flight.
