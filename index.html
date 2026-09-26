@@ -111,7 +111,6 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:620px;margin:24px auto">
     <div class="tag">FLY-IN FOOD</div>
     <div style="font-size:22px;font-weight:900;margin-top:4px">Airport Restaurants</div>
-    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants. Inside each state, one OFF FIELD button downloads that whole state. After it finishes, OFF FIELD shows an airport list; tap an airport to see its nearby restaurants. Results cache on this device for up to one year.</div>
     <div id="foodStateView"></div>
     <div id="foodListView" class="hidden"></div>
     <button class="secondary" style="margin-top:14px" onclick="closeFlyInFood()">Close</button>
@@ -1281,7 +1280,7 @@ function showFoodState(code,fromRefresh=false,mode=foodMode){
   const isOff=foodMode==='off';
   const onStyle=!isOff?'background:#1976d2':'background:#14283d;border:1px solid #29445f';
   const offStyle=isOff?'background:#1976d2':'background:#14283d;border:1px solid #29445f';
-  const top=`<div style="position:sticky;top:-18px;z-index:4;background:#0d1b2c;padding:8px 0 9px;border-bottom:1px solid #203247"><button class="secondary" onclick="renderFoodStates()" style="width:auto;padding:9px 14px;margin-bottom:8px">← States</button><div style="font-size:20px;font-weight:900">${foodEsc(FOOD_STATE_NAMES[code])}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button onclick="setFoodMode('${code}','on')" style="padding:11px;${onStyle}">ON FIELD</button><button onclick="setFoodMode('${code}','off')" style="padding:11px;${offStyle}">OFF FIELD ≤ ${FOOD_OFF_RADIUS_MI} MI</button></div>${foodOffTopButton(code)}</div>`;
+  const top=`<div style="position:sticky;top:-18px;z-index:4;background:#0d1b2c;padding:8px 0 9px;border-bottom:1px solid #203247"><button class="secondary" onclick="renderFoodStates()" style="width:auto;padding:9px 14px;margin-bottom:8px">← States</button><div style="font-size:20px;font-weight:900">${foodEsc(FOOD_STATE_NAMES[code])}</div><div class="muted" style="font-size:12px;line-height:1.45;margin-top:5px">ON FIELD is already loaded. For OFF FIELD, download the whole state once; when it finishes, tap an airport to see its nearby restaurants. Saved on this device for up to one year.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><button onclick="setFoodMode('${code}','on')" style="padding:11px;${onStyle}">ON FIELD</button><button onclick="setFoodMode('${code}','off')" style="padding:11px;${offStyle}">OFF FIELD ≤ ${FOOD_OFF_RADIUS_MI} MI</button></div>${foodOffTopButton(code)}</div>`;
   let body='';
   if(!isOff){
     const rows=foodRowsForState(code);
