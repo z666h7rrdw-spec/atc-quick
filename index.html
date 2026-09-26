@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V76</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V77</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -142,7 +142,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=76"></script><!-- ATC Quick V76 -->
+</main><script src="data.js?v=77"></script><!-- ATC Quick V77 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -757,7 +757,7 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=76',{updateViaCache:'none'})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=77',{updateViaCache:'none'})}
 // V68 — Fly-In Food on/off-field filtering test. Kept separate from route planning to avoid cockpit clutter.
 const FLY_IN_FOOD = [
   {state:"NC",airport:"RDU",airportName:"Raleigh-Durham Intl",restaurant:"Crosswinds Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
@@ -912,17 +912,102 @@ function showFoodState(code){
 // V70 — Museums. Broad museum category; not limited to places labeled "aviation museum".
 // OFF FIELD is limited to museums within 5 miles of the airport. Distances are approximate airport-to-destination distances unless a source publishes a more specific value.
 const FLY_IN_MUSEUMS = [
-  {state:"NC",airport:"HBI",airportName:"Asheboro Regional",museum:"North Carolina Aviation Museum and Hall of Fame",kind:"ON FIELD",distance:0,source:"FAA airport remarks / official museum",phone:"336-625-0170"},
+  {state:"AL",airport:"BHM",airportName:"Birmingham-Shuttlesworth Intl",museum:"Southern Museum of Flight",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list / museum directory",phone:"205-833-8226"},
+  {state:"AK",airport:"LHD",airportName:"Lake Hood Seaplane Base",museum:"Alaska Aviation Museum",kind:"ON FIELD",distance:0,source:"Official museum — located on Lake Hood Seaplane Base",phone:"907-248-5325"},
+  {state:"AZ",airport:"FFZ",airportName:"Falcon Field",museum:"CAF Airbase Arizona",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list / official museum"},
+  {state:"AZ",airport:"PHX",airportName:"Phoenix Sky Harbor Intl",museum:"Phoenix Airport Museum",kind:"ON FIELD",distance:0,source:"Airport museum directory / City of Phoenix"},
+  {state:"AR",airport:"FSM",airportName:"Fort Smith Regional",museum:"Fort Smith Air Museum",kind:"ON FIELD",distance:0,source:"Airport museum directory / museum directory"},
+  {state:"AR",airport:"FYV",airportName:"Drake Field",museum:"Arkansas Air & Military Museum",kind:"ON FIELD",distance:0,source:"Flight Journal museum directory / airport location"},
+  {state:"CA",airport:"SQL",airportName:"San Carlos",museum:"Hiller Aviation Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list / official museum"},
+  {state:"CA",airport:"CNO",airportName:"Chino",museum:"Planes of Fame Air Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"CA",airport:"MER",airportName:"Castle",museum:"Castle Air Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"CA",airport:"CIC",airportName:"Chico Regional",museum:"Chico Air Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"CA",airport:"MCC",airportName:"McClellan Airfield",museum:"Aerospace Museum of California",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"CA",airport:"SZP",airportName:"Santa Paula",museum:"Aviation Museum of Santa Paula",kind:"ON FIELD",distance:0,source:"Airport museum directory"},
+  {state:"CA",airport:"PSP",airportName:"Palm Springs Intl",museum:"Palm Springs Air Museum",kind:"ON FIELD",distance:0,source:"AOPA feature — contiguous with PSP taxiways"},
+  {state:"CO",airport:"PUB",airportName:"Pueblo Memorial",museum:"Pueblo Weisbrod Aircraft Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"CO",airport:"COS",airportName:"Colorado Springs",museum:"National Museum of World War II Aviation",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"CO",airport:"APA",airportName:"Centennial",museum:"Boeing Blue Sky Aviation Gallery",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"CT",airport:"BDL",airportName:"Bradley Intl",museum:"New England Air Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"DE",airport:"GED",airportName:"Delaware Coastal",museum:"Delaware Aviation Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"FL",airport:"LAL",airportName:"Lakeland Linder Intl",museum:"Florida Air Museum / Aerospace Center for Excellence",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport campus"},
+  {state:"FL",airport:"TIX",airportName:"Space Coast Regional",museum:"Valiant Air Command Warbird Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"GA",airport:"ATL",airportName:"Hartsfield-Jackson Atlanta Intl",museum:"Delta Flight Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"HI",airport:"HNL",airportName:"Daniel K. Inouye Intl",museum:"Pearl Harbor Aviation Museum",kind:"OFF FIELD",distance:3.5,source:"Official museum / Pearl Harbor location cross-check"},
+  {state:"ID",airport:"RXE",airportName:"Rexburg-Madison County",museum:"Legacy Flight Museum",kind:"ON FIELD",distance:0,source:"Official museum — Madison/Rexburg Airport",phone:"208-359-5905"},
+  {state:"IL",airport:"CPS",airportName:"St. Louis Downtown",museum:"Greater St. Louis Air & Space Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"IL",airport:"BMI",airportName:"Central Illinois Regional",museum:"Prairie Aviation Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"IN",airport:"BAK",airportName:"Columbus Municipal",museum:"Atterbury-Bakalar Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"IA",airport:"GFZ",airportName:"Greenfield Municipal",museum:"Iowa Aviation Museum and Hall of Fame",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"KS",airport:"FOE",airportName:"Topeka Regional",museum:"Combat Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"KY",airport:"LEX",airportName:"Blue Grass",museum:"Aviation Museum of Kentucky",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"LA",airport:"MLU",airportName:"Monroe Regional",museum:"Chennault Aviation & Military Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"LA",airport:"TVR",airportName:"Vicksburg-Tallulah Regional",museum:"Southern Heritage Air Foundation Museum",kind:"ON FIELD",distance:0,source:"AOPA Louisiana airport passport / museum directory"},
+  {state:"ME",airport:"BGR",airportName:"Bangor Intl",museum:"Maine Air Museum",kind:"ON FIELD",distance:0,source:"Official museum — located at Bangor International Airport"},
+  {state:"ME",airport:"RKD",airportName:"Knox County Regional",museum:"Owls Head Transportation Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"MD",airport:"CGS",airportName:"College Park",museum:"College Park Aviation Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"MD",airport:"HGR",airportName:"Hagerstown Regional",museum:"Hagerstown Aviation Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"MA",airport:"3B3",airportName:"Stow Minuteman",museum:"American Heritage Museum / Collings Foundation",kind:"OFF FIELD",distance:2.5,source:"Flight Journal directory / local airport cross-check"},
+  {state:"MI",airport:"YIP",airportName:"Willow Run",museum:"Yankee Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"MI",airport:"AZO",airportName:"Kalamazoo/Battle Creek Intl",museum:"Air Zoo Aerospace & Science Museum",kind:"OFF FIELD",distance:1.0,source:"Flight Journal directory / airport-adjacent location"},
+  {state:"MN",airport:"GDB",airportName:"Granite Falls Municipal/Lenzen-Roe-Fagen Memorial",museum:"Fagen Fighters WWII Museum",kind:"ON FIELD",distance:0,source:"Official museum — located on KGDB",phone:"320-564-6644"},
+  {state:"MN",airport:"SGS",airportName:"South St. Paul Municipal/Richard E. Fleming Field",museum:"Minnesota Wing CAF Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"MS",airport:"GPT",airportName:"Gulfport-Biloxi Intl",museum:"Mississippi Aviation Heritage Museum",kind:"OFF FIELD",distance:3.0,source:"Official museum — states GPT is 3 miles away",phone:"228-999-2816"},
+  {state:"MO",airport:"1H0",airportName:"Creve Coeur",museum:"Historic Aircraft Restoration Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"MT",airport:"MSO",airportName:"Missoula Montana",museum:"Museum of Mountain Flying",kind:"ON FIELD",distance:0,source:"Official/encyclopedic source — located at Missoula airport"},
+  {state:"NE",airport:"0V3",airportName:"Pioneer Village Field",museum:"Harold Warp Pioneer Village",kind:"OFF FIELD",distance:1.5,source:"City of Minden / Pioneer Village cross-check"},
+  {state:"NV",airport:"LAS",airportName:"Harry Reid Intl",museum:"Howard W. Cannon Aviation Museum",kind:"ON FIELD",distance:0,source:"Clark County — museum located inside LAS",phone:"702-455-7968"},
+  {state:"NH",airport:"MHT",airportName:"Manchester-Boston Regional",museum:"Aviation Museum of New Hampshire",kind:"ON FIELD",distance:0,source:"Official museum — located at MHT",phone:"603-669-4820"},
+  {state:"NJ",airport:"MIV",airportName:"Millville Municipal",museum:"Millville Army Air Field Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"NJ",airport:"TEB",airportName:"Teterboro",museum:"New Jersey Aviation Hall of Fame & Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"NM",airport:"DNA",airportName:"Doña Ana County Intl Jetport",museum:"War Eagles Air Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"NM",airport:"ROW",airportName:"Roswell Air Center",museum:"Walker Aviation Museum",kind:"ON FIELD",distance:0,source:"Airport museum directory"},
+  {state:"NY",airport:"FRG",airportName:"Republic",museum:"American Airpower Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"NY",airport:"D52",airportName:"Geneseo",museum:"National Warplane Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"NY",airport:"SCH",airportName:"Schenectady County",museum:"Empire State Aerosciences Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"NC",airport:"HBI",airportName:"Asheboro Regional",museum:"North Carolina Aviation Museum and Hall of Fame",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up / official museum",phone:"336-625-0170"},
   {state:"NC",airport:"HKY",airportName:"Hickory Regional",museum:"Hickory Aviation Museum",kind:"ON FIELD",distance:0,source:"Official museum / Hickory Regional Airport",phone:"828-323-1963"},
   {state:"NC",airport:"FFA",airportName:"First Flight",museum:"Wright Brothers National Memorial",kind:"ON FIELD",distance:0,source:"National Park Service",phone:"252-473-2111"},
-  {state:"NC",airport:"CLT",airportName:"Charlotte Douglas Intl",museum:"Sullenberger Aviation Museum",kind:"OFF FIELD",distance:4.9,source:"Official museum / business cross-check",rating:4.4,reviews:716,phone:"704-997-3770"},
-  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",museum:"Museum of Coastal Carolina",kind:"OFF FIELD",distance:1.4,source:"Official museum / business cross-check",rating:4.5,reviews:177,phone:"910-579-1016"},
-  {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Andy Griffith Museum",kind:"OFF FIELD",distance:4.0,source:"Official site / Yelp cross-check",rating:4.3,reviews:1098,phone:"336-786-1604"},
-  {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Mount Airy Museum of Regional History",kind:"OFF FIELD",distance:4.1,source:"Official site / Yelp cross-check",rating:4.6,reviews:159,phone:"336-786-4478"},
+  {state:"NC",airport:"MQI",airportName:"Dare County Regional",museum:"Dare County Regional Airport Museum",kind:"ON FIELD",distance:0,source:"Airport museum directory"},
+  {state:"NC",airport:"CLT",airportName:"Charlotte Douglas Intl",museum:"Sullenberger Aviation Museum",kind:"OFF FIELD",distance:4.9,source:"Official museum / business cross-check",phone:"704-997-3770"},
+  {state:"NC",airport:"60J",airportName:"Odell Williamson Muni",museum:"Museum of Coastal Carolina",kind:"OFF FIELD",distance:1.4,source:"Official museum / business cross-check",phone:"910-579-1016"},
+  {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Andy Griffith Museum",kind:"OFF FIELD",distance:4.0,source:"Official site / Yelp cross-check",phone:"336-786-1604"},
+  {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Mount Airy Museum of Regional History",kind:"OFF FIELD",distance:4.1,source:"Official site / Yelp cross-check",phone:"336-786-4478"},
   {state:"NC",airport:"JNX",airportName:"Johnston Rgnl",museum:"Ava Gardner Museum",kind:"OFF FIELD",distance:3.3,source:"Johnston County tourism / web cross-check"},
   {state:"NC",airport:"JNX",airportName:"Johnston Rgnl",museum:"Johnston County Museum",kind:"OFF FIELD",distance:3.3,source:"Johnston County tourism / web cross-check"},
   {state:"NC",airport:"FQD",airportName:"Rutherford County/Marchman Fld",museum:"KidSenses Children's Interactive Museum",kind:"OFF FIELD",distance:4.4,source:"Rutherfordton / web cross-check"},
-  {state:"SC",airport:"GMU",airportName:"Greenville Downtown",museum:"Greenville County Museum of Art",kind:"OFF FIELD",distance:3.0,source:"Business listing / web cross-check"}
+  {state:"ND",airport:"FAR",airportName:"Hector Intl",museum:"Fargo Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"ND",airport:"MOT",airportName:"Minot Intl",museum:"Dakota Territory Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"OH",airport:"I74",airportName:"Grimes Field",museum:"Champaign Aviation Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum follow-up"},
+  {state:"OH",airport:"BKL",airportName:"Burke Lakefront",museum:"International Women's Air & Space Museum",kind:"ON FIELD",distance:0,source:"Airport museum directory"},
+  {state:"OH",airport:"1WF",airportName:"Waco Field",museum:"WACO Air Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"OK",airport:"RQO",airportName:"El Reno Regional/Mustang Field",museum:"The Caldwell Collection at Mustang Field",kind:"ON FIELD",distance:0,source:"Official museum — fly directly to KRQO"},
+  {state:"OR",airport:"4S2",airportName:"Ken Jernstedt Airfield",museum:"Western Antique Aeroplane & Automobile Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / Hood River airport location"},
+  {state:"OR",airport:"EUG",airportName:"Mahlon Sweet Field",museum:"Oregon Air and Space Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"OR",airport:"TMK",airportName:"Tillamook",museum:"Tillamook Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"PA",airport:"RDG",airportName:"Reading Regional/Carl A. Spaatz Field",museum:"Mid-Atlantic Air Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"PA",airport:"LHV",airportName:"William T. Piper Memorial",museum:"Piper Aviation Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"RI",airport:"WST",airportName:"Westerly State",museum:"Heritage Flight Foundation",kind:"ON FIELD",distance:0,source:"Official foundation — Westerly airport location"},
+  {state:"SC",airport:"MYR",airportName:"Myrtle Beach Intl",museum:"Warbird Park",kind:"OFF FIELD",distance:1.5,source:"Flight Journal directory / local airport cross-check"},
+  {state:"SC",airport:"LRO",airportName:"Mount Pleasant Regional-Faison Field",museum:"Patriots Point Naval & Maritime Museum",kind:"OFF FIELD",distance:4.8,source:"Flight Journal directory / local airport cross-check"},
+  {state:"SD",airport:"FSD",airportName:"Sioux Falls Regional/Joe Foss Field",museum:"South Dakota ANG Air Park",kind:"ON FIELD",distance:0,source:"South Dakota aviation museum directory / Joe Foss Field"},
+  {state:"TN",airport:"THA",airportName:"Tullahoma Regional/William Northern Field",museum:"Beechcraft Heritage Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"TN",airport:"GKT",airportName:"Gatlinburg-Pigeon Forge",museum:"Tennessee Museum of Aviation",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"TX",airport:"HOU",airportName:"William P. Hobby",museum:"1940 Air Terminal Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"TX",airport:"EFD",airportName:"Ellington",museum:"Lone Star Flight Museum",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"TX",airport:"LBB",airportName:"Lubbock Preston Smith Intl",museum:"Silent Wings Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"UT",airport:"ENV",airportName:"Wendover",museum:"Historic Wendover Airfield Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"UT",airport:"OGD",airportName:"Ogden-Hinckley",museum:"Hill Aerospace Museum",kind:"OFF FIELD",distance:3.5,source:"Flight Journal directory / local airport cross-check"},
+  {state:"VT",airport:"CDA",airportName:"Caledonia County State",museum:"Vermont Aviation Museum & Flying School",kind:"ON FIELD",distance:0,source:"Vermont Agency of Transportation — on airport grounds"},
+  {state:"VA",airport:"EZF",airportName:"Shannon",museum:"Shannon Air Museum",kind:"ON FIELD",distance:0,source:"Virginia/Flight Journal museum directory / airport location"},
+  {state:"VA",airport:"IAD",airportName:"Washington Dulles Intl",museum:"Steven F. Udvar-Hazy Center",kind:"OFF FIELD",distance:3.0,source:"Smithsonian / Dulles-area cross-check"},
+  {state:"WA",airport:"BFI",airportName:"King County Intl/Boeing Field",museum:"Museum of Flight",kind:"ON FIELD",distance:0,source:"AOPA on-airport museum list"},
+  {state:"WA",airport:"PAE",airportName:"Seattle Paine Field Intl",museum:"Future of Flight Aviation Center",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"WA",airport:"OLM",airportName:"Olympia Regional",museum:"Olympic Flight Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"WV",airport:"MRB",airportName:"Eastern WV Regional/Shepherd Field",museum:"MRB Aviation History Museum",kind:"ON FIELD",distance:0,source:"Official airport — local Aviation History museum in terminal"},
+  {state:"WI",airport:"OSH",airportName:"Wittman Regional",museum:"EAA Aviation Museum",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"},
+  {state:"WI",airport:"MKE",airportName:"Milwaukee Mitchell Intl",museum:"Mitchell Gallery of Flight",kind:"ON FIELD",distance:0,source:"Airport museum directory"},
+  {state:"WY",airport:"GEY",airportName:"South Big Horn County",museum:"Museum of Flight and Aerial Firefighting",kind:"ON FIELD",distance:0,source:"Flight Journal directory / airport location"}
 ];
 const MUSEUM_STATE_NAMES=FOOD_STATE_NAMES;
 let museumMode="ON FIELD";

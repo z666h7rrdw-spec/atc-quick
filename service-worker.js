@@ -1,4 +1,4 @@
-const C='atc-quick-v76';
+const C='atc-quick-v77';
 const F=['./data.js?v=74','./airports.json','./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',e=>{
