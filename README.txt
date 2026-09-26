@@ -72,7 +72,7 @@ V81 nationwide museum balance fix:
 V81 museum fix: replaced the retired Carto museum endpoint with a stable nationwide CSV mirror plus fallback; changed cache key so old V80 museum counts cannot persist.
 
 
-V84 nationwide ON-FIELD restaurant build:
+V85 nationwide ON-FIELD restaurant build:
 - Fly-In Food is ON FIELD only for this build; OFF FIELD is intentionally deferred to the next phase.
 - All 50 states are active.
 - Uses Fly2Lunch's live on-airport restaurant search and the local FAA airport database to cover each state's airports.
@@ -80,3 +80,6 @@ V84 nationwide ON-FIELD restaurant build:
 - Existing hand-checked NC/VA/GA/SC on-field entries remain as an offline fallback and are merged/deduplicated with live results.
 - State tiles show live on-field restaurant counts as each state completes.
 - Restaurant listings remain convenience data; call ahead to verify hours, airport access, and that the restaurant is still operating.
+
+
+V85: Added OFF FIELD restaurant mode within 5 miles of open public-use airports. VA/NC/SC preload automatically; all other states are click-to-load. OFF FIELD source is OpenStreetMap via Overpass and caches per state for one year.

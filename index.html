@@ -111,7 +111,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:620px;margin:24px auto">
     <div class="tag">FLY-IN FOOD</div>
     <div style="font-size:22px;font-weight:900;margin-top:4px">Airport Restaurants</div>
-    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants. All states load automatically from the live Fly2Lunch on-airport search and cache on this device for up to one year. OFF FIELD will be added next.</div>
+    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants plus OFF FIELD restaurants within 5 miles of a public-use airport. Virginia, North Carolina and South Carolina preload automatically; other states load OFF FIELD only when you tap them. Results cache on this device for up to one year.</div>
     <div id="foodStateView"></div>
     <div id="foodListView" class="hidden"></div>
     <button class="secondary" style="margin-top:14px" onclick="closeFlyInFood()">Close</button>
@@ -838,7 +838,7 @@ const FLY_IN_FOOD = [
 ];
 const FOOD_STATE_NAMES={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
 
-// V84 — nationwide ON-FIELD restaurant loader; 1-year device cache.
+// V85 — nationwide ON-FIELD + click-to-load OFF-FIELD restaurant loader; 1-year device cache.
 // Source: Fly2Lunch's live "on airport" search. We use the local FAA airport database to pick
 // enough search origins to cover each state's airports, then filter results back to that state.
 // Results are cached per state so subsequent openings are immediate. The older hand-checked
@@ -853,6 +853,25 @@ let foodAutoStarted=false;
 let foodDirectFetchAllowed=true;
 let foodJinaChain=Promise.resolve();
 let foodJinaNextAt=0;
+
+// V85 OFF FIELD — OpenStreetMap/Overpass restaurants within 5 statute miles, matching the app's museum proximity rule.
+// VA / NC / SC preload automatically. All other states stay click-to-load so the app does not download a huge nationwide dataset.
+const FOOD_OFF_RADIUS_MI=5;
+const FOOD_OFF_RADIUS_M=Math.round(FOOD_OFF_RADIUS_MI*1609.344);
+const FOOD_OFF_CACHE_PREFIX='atcquick_food_offfield_v85_';
+const FOOD_OFF_CACHE_TTL=365*24*60*60*1000;
+const FOOD_OFF_PRELOAD=['VA','NC','SC'];
+const FOOD_OFF_BY_STATE={};
+const FOOD_OFF_STATUS={};
+const FOOD_OFF_PROMISE={};
+let foodMode='on';
+let foodOffAutoStarted=false;
+let foodOverpassEndpointIndex=0;
+const FOOD_OVERPASS_ENDPOINTS=[
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+];
 
 function foodSleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function foodEsc(s){return String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));}
@@ -1005,6 +1024,118 @@ async function foodFetchSearch(seed){
   }
   return await foodJinaFetch(target);
 }
+function foodOffDedupe(rows){
+  const m=new Map();
+  for(const r of rows||[]){
+    const key=`${r.airport}|${foodNormName(r.restaurant)}`;
+    if(!m.has(key)) m.set(key,r);
+    else{
+      const old=m.get(key);
+      // Preserve hand-checked details, but fill missing coordinates/cuisine/phone from the live map source.
+      m.set(key,{...r,...old,lat:old.lat??r.lat,lon:old.lon??r.lon,cuisine:old.cuisine||r.cuisine,phone:old.phone||r.phone,osmId:old.osmId||r.osmId});
+    }
+  }
+  return [...m.values()].sort((a,b)=>(a.airport||'').localeCompare(b.airport||'')||(Number(a.distance)||99)-(Number(b.distance)||99)||(a.restaurant||'').localeCompare(b.restaurant||''));
+}
+function foodOffStaticRows(code){return FLY_IN_FOOD.filter(x=>x.state===code && x.kind==='OFF FIELD');}
+function foodOffRowsForState(code){ return foodOffDedupe([...(FOOD_OFF_BY_STATE[code]||[]),...foodOffStaticRows(code)]); }
+function foodOffCacheRead(code){
+  try{
+    const x=JSON.parse(localStorage.getItem(FOOD_OFF_CACHE_PREFIX+code)||'null');
+    if(!x || !Array.isArray(x.rows) || !x.saved || Date.now()-x.saved>FOOD_OFF_CACHE_TTL) return false;
+    FOOD_OFF_BY_STATE[code]=x.rows;
+    FOOD_OFF_STATUS[code]='done';
+    return true;
+  }catch(e){return false;}
+}
+function foodOffCacheWrite(code,rows){
+  try{localStorage.setItem(FOOD_OFF_CACHE_PREFIX+code,JSON.stringify({saved:Date.now(),rows}));}catch(e){}
+}
+function foodNormName(x){return String(x||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim();}
+function foodNearestAirport(lat,lon,airports){
+  let best=null,bd=Infinity;
+  for(const a of airports){
+    const d=dist([lat,lon],[a.lat,a.lon]);
+    if(d<bd){bd=d;best=a;}
+  }
+  return best && bd<=FOOD_OFF_RADIUS_MI?{airport:best,distance:bd}:null;
+}
+function foodOverpassQuery(chunk){
+  const lines=chunk.map(a=>`nwr["amenity"~"^(restaurant|fast_food|cafe|food_court)$"](around:${FOOD_OFF_RADIUS_M},${a.lat.toFixed(6)},${a.lon.toFixed(6)});`).join('\n');
+  return `[out:json][timeout:120];(\n${lines}\n);out center tags;`;
+}
+async function foodFetchOverpass(query){
+  let lastErr=null;
+  for(let n=0;n<FOOD_OVERPASS_ENDPOINTS.length;n++){
+    const i=(foodOverpassEndpointIndex+n)%FOOD_OVERPASS_ENDPOINTS.length;
+    const endpoint=FOOD_OVERPASS_ENDPOINTS[i];
+    try{
+      const body='data='+encodeURIComponent(query);
+      const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Accept':'application/json'},body,cache:'no-store'});
+      if(!r.ok) throw new Error(`Overpass ${r.status}`);
+      const j=await r.json();
+      foodOverpassEndpointIndex=i;
+      return j;
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error('Restaurant map source unavailable');
+}
+function foodParseOffElements(j,code,airports){
+  const out=[];
+  const onByAirport={};
+  for(const r of foodRowsForState(code)) (onByAirport[r.airport]??=new Set()).add(foodNormName(r.restaurant));
+  for(const el of (j?.elements||[])){
+    const t=el.tags||{};
+    const name=String(t.name||t.brand||'').trim(); if(!name) continue;
+    const lat=Number(el.lat??el.center?.lat), lon=Number(el.lon??el.center?.lon);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)) continue;
+    const near=foodNearestAirport(lat,lon,airports); if(!near) continue;
+    const a=near.airport;
+    // Known on-field restaurant names are not repeated in the OFF FIELD list.
+    if(onByAirport[a.id]?.has(foodNormName(name))) continue;
+    const phone=t.phone||t['contact:phone']||'';
+    const cuisine=String(t.cuisine||'').replace(/;/g,', ');
+    out.push({state:code,airport:a.id,airportName:a.name||a.id,restaurant:name,kind:'OFF FIELD',distance:Number(near.distance.toFixed(1)),source:'OpenStreetMap / Overpass',phone,cuisine,lat,lon,osmId:`${el.type}:${el.id}`});
+  }
+  return foodOffDedupe(out);
+}
+async function loadOffFoodState(code){
+  if(FOOD_OFF_STATUS[code]==='done') return FOOD_OFF_BY_STATE[code]||[];
+  if(FOOD_OFF_PROMISE[code]) return FOOD_OFF_PROMISE[code];
+  const run=(async()=>{
+    FOOD_OFF_STATUS[code]='loading'; refreshFoodUI(code);
+    for(let i=0;i<30 && !(AIRPORT_QUICK_DATA||[]).length;i++) await foodSleep(150);
+    const airports=foodStateCandidates(code);
+    if(!airports.length){FOOD_OFF_BY_STATE[code]=[];FOOD_OFF_STATUS[code]='done';foodOffCacheWrite(code,[]);refreshFoodUI(code);return [];}
+    const rows=[]; let successful=0;
+    const chunkSize=22;
+    for(let i=0;i<airports.length;i+=chunkSize){
+      const chunk=airports.slice(i,i+chunkSize);
+      try{
+        const j=await foodFetchOverpass(foodOverpassQuery(chunk));
+        successful++;
+        rows.push(...foodParseOffElements(j,code,airports));
+      }catch(e){/* continue other airport chunks */}
+      refreshFoodUI(code);
+      await foodSleep(250);
+    }
+    const finalRows=foodOffDedupe(rows);
+    if(successful){FOOD_OFF_BY_STATE[code]=finalRows;FOOD_OFF_STATUS[code]='done';foodOffCacheWrite(code,finalRows);}
+    else FOOD_OFF_STATUS[code]='error';
+    refreshFoodUI(code);
+    return finalRows;
+  })();
+  FOOD_OFF_PROMISE[code]=run.finally(()=>{delete FOOD_OFF_PROMISE[code];});
+  return FOOD_OFF_PROMISE[code];
+}
+async function preloadPriorityOffFood(){
+  if(foodOffAutoStarted) return; foodOffAutoStarted=true;
+  for(const c of Object.keys(FOOD_STATE_NAMES)) if(!FOOD_OFF_STATUS[c]) foodOffCacheRead(c);
+  for(const c of FOOD_OFF_PRELOAD){
+    if(FOOD_OFF_STATUS[c]!=='done') await loadOffFoodState(c);
+    await foodSleep(300);
+  }
+}
 function refreshFoodUI(code){
   if($('flyInFoodPanel').classList.contains('hidden')) return;
   if(foodStateCode===code) showFoodState(code,true);
@@ -1056,55 +1187,78 @@ async function loadAllFoodStates(){
 }
 function openFlyInFood(){
   $('flyInFoodPanel').classList.remove('hidden');
-  for(const c of Object.keys(FOOD_STATE_NAMES)) if(!FOOD_LOAD_STATUS[c]) foodCacheRead(c);
+  for(const c of Object.keys(FOOD_STATE_NAMES)){
+    if(!FOOD_LOAD_STATUS[c]) foodCacheRead(c);
+    if(!FOOD_OFF_STATUS[c]) foodOffCacheRead(c);
+  }
   renderFoodStates();
   setTimeout(()=>loadAllFoodStates(),50);
+  setTimeout(()=>preloadPriorityOffFood(),600);
 }
 function closeFlyInFood(){ $('flyInFoodPanel').classList.add('hidden'); }
 function renderFoodStates(keepCode=false){
   const codes=Object.keys(FOOD_STATE_NAMES);
-  if(!keepCode) foodStateCode=null;
+  if(!keepCode){foodStateCode=null;foodMode='on';}
   $('foodListView').classList.add('hidden');
   $('foodStateView').classList.remove('hidden');
   const done=codes.filter(c=>FOOD_LOAD_STATUS[c]==='done').length;
   const total=foodDedupe(codes.flatMap(c=>foodRowsForState(c))).length;
   const errors=codes.filter(c=>FOOD_LOAD_STATUS[c]==='error').length;
-  const status=`<div class="card" style="margin:0 0 12px;padding:11px"><b>ON FIELD nationwide</b><div class="muted" style="font-size:12px;margin-top:3px">${done}/50 states loaded · ${total} restaurant${total===1?'':'s'}${errors?` · ${errors} state${errors===1?'':'s'} will retry when opened`:''}</div></div>`;
+  const offDone=codes.filter(c=>FOOD_OFF_STATUS[c]==='done').length;
+  const offTotal=codes.reduce((n,c)=>n+foodOffRowsForState(c).length,0);
+  const status=`<div class="card" style="margin:0 0 12px;padding:11px"><b>ON FIELD nationwide</b><div class="muted" style="font-size:12px;margin-top:3px">${done}/50 states loaded · ${total} restaurant${total===1?'':'s'}${errors?` · ${errors} state${errors===1?'':'s'} will retry when opened`:''}</div><div style="height:1px;background:#203247;margin:8px 0"></div><b>OFF FIELD ≤ ${FOOD_OFF_RADIUS_MI} mi</b><div class="muted" style="font-size:12px;margin-top:3px">VA · NC · SC preload automatically · ${offDone} state${offDone===1?'':'s'} cached · ${offTotal} nearby restaurant${offTotal===1?'':'s'} · other states load when tapped</div></div>`;
   $('foodStateView').innerHTML=status+`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{
     const rows=foodRowsForState(code), st=FOOD_LOAD_STATUS[code]||'queued';
-    let tail=st==='done'?`${rows.length} on field`:st==='loading'?'loading…':st==='error'?'tap to retry':'queued';
-    return `<button class="secondary" onclick="showFoodState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${FOOD_STATE_NAMES[code]} · ${tail}</div></button>`;
+    const off=foodOffRowsForState(code), ost=FOOD_OFF_STATUS[code]||'idle';
+    let tail=st==='done'?`${rows.length} on`:st==='loading'?'on loading…':st==='error'?'on retry':'on queued';
+    let offTail=ost==='done'?`${off.length} off`:ost==='loading'?'off loading…':ost==='error'?'off retry':FOOD_OFF_PRELOAD.includes(code)?'off preload':'off tap';
+    return `<button class="secondary" onclick="showFoodState('${code}')" style="padding:11px 9px"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${FOOD_STATE_NAMES[code]} · ${tail} · ${offTail}</div></button>`;
   }).join('')}</div>`;
 }
-function foodRestaurantCard(r){
-  return `<div class="step"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="font-size:18px;font-weight:850">${foodEsc(r.restaurant)}</div>${r.rating?`<div class="muted" style="font-size:13px;margin-top:3px">${Number(r.rating).toFixed(1)}★</div>`:''}${r.phone?`<div style="font-size:13px;margin-top:3px"><a href="tel:${String(r.phone).replace(/[^0-9+]/g,'')}" style="color:#8ec5ff;text-decoration:none">${foodEsc(r.phone)}</a></div>`:''}</div><span class="pill" style="white-space:nowrap">ON FIELD</span></div><div class="muted" style="font-size:11px;margin-top:6px">Source: ${foodEsc(r.source||'Fly2Lunch')} · Call ahead to verify restaurant hours and ramp access.</div></div>`;
+function foodRestaurantCard(r,mode='on'){
+  const off=mode==='off';
+  const badge=off?`OFF FIELD · ${Number(r.distance||0).toFixed(1)} mi`:'ON FIELD';
+  const details=[r.cuisine?foodEsc(r.cuisine):'',off&&Number.isFinite(Number(r.distance))?`${Number(r.distance).toFixed(1)} mi from airport`:'' ].filter(Boolean).join(' · ');
+  const mapLink=off&&Number.isFinite(Number(r.lat))&&Number.isFinite(Number(r.lon))?`<div style="font-size:12px;margin-top:5px"><a href="https://maps.apple.com/?ll=${r.lat},${r.lon}&q=${encodeURIComponent(r.restaurant)}" target="_blank" style="color:#8ec5ff;text-decoration:none">Open in Maps</a></div>`:'';
+  return `<div class="step"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><div style="font-size:18px;font-weight:850">${foodEsc(r.restaurant)}</div>${r.rating?`<div class="muted" style="font-size:13px;margin-top:3px">${Number(r.rating).toFixed(1)}★</div>`:''}${details?`<div class="muted" style="font-size:12px;margin-top:3px">${details}</div>`:''}${r.phone?`<div style="font-size:13px;margin-top:3px"><a href="tel:${String(r.phone).replace(/[^0-9+]/g,'')}" style="color:#8ec5ff;text-decoration:none">${foodEsc(r.phone)}</a></div>`:''}${mapLink}</div><span class="pill" style="white-space:nowrap">${badge}</span></div><div class="muted" style="font-size:11px;margin-top:6px">Source: ${foodEsc(r.source||(off?'OpenStreetMap':'Fly2Lunch'))} · ${off?'Verify restaurant hours and ground access before flight.':'Call ahead to verify restaurant hours and ramp access.'}</div></div>`;
 }
-function showFoodState(code,fromRefresh=false){
-  foodStateCode=code;
+function setFoodMode(code,mode){foodMode=mode;showFoodState(code,false,mode);}
+function showFoodState(code,fromRefresh=false,mode=foodMode){
+  foodStateCode=code; foodMode=mode||'on';
   $('foodStateView').classList.add('hidden');
   $('foodListView').classList.remove('hidden');
-  const rows=foodRowsForState(code);
-  const st=FOOD_LOAD_STATUS[code]||'queued';
+  const isOff=foodMode==='off';
+  const rows=isOff?foodOffRowsForState(code):foodRowsForState(code);
+  const st=isOff?(FOOD_OFF_STATUS[code]||'idle'):(FOOD_LOAD_STATUS[code]||'queued');
   const groups=[];
   for(const r of rows){
     let g=groups.find(x=>x.airport===r.airport);
     if(!g){g={airport:r.airport,airportName:r.airportName,rows:[]};groups.push(g);}
     g.rows.push(r);
   }
-  const modeControls=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px"><button style="padding:11px;background:#1976d2">ON FIELD</button><button disabled style="padding:11px;background:#14283d;border:1px solid #29445f;opacity:.48">OFF FIELD — NEXT</button></div>`;
+  for(const g of groups) g.rows.sort((a,b)=>isOff?((Number(a.distance)||99)-(Number(b.distance)||99)):(a.restaurant||'').localeCompare(b.restaurant||''));
+  const onStyle=!isOff?'background:#1976d2':'background:#14283d;border:1px solid #29445f';
+  const offStyle=isOff?'background:#1976d2':'background:#14283d;border:1px solid #29445f';
+  const modeControls=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px"><button onclick="setFoodMode('${code}','on')" style="padding:11px;${onStyle}">ON FIELD</button><button onclick="setFoodMode('${code}','off')" style="padding:11px;${offStyle}">OFF FIELD ≤ ${FOOD_OFF_RADIUS_MI} MI</button></div>`;
   let body='';
   if(groups.length){
-    body=`<div class="muted" style="font-size:12px;margin:8px 0 2px">${rows.length} on-field restaurant${rows.length===1?'':'s'} across ${groups.length} airport${groups.length===1?'':'s'}${st==='loading'?' · nationwide search still adding results':''}</div>`+
-      groups.map(g=>`<div class="card" style="margin-top:10px;padding:12px"><div style="font-size:18px;font-weight:900;margin-bottom:4px">${foodEsc(g.airport)} · ${foodEsc(g.airportName)}</div>${g.rows.map(foodRestaurantCard).join('')}</div>`).join('');
-  }else if(st==='loading' || st==='queued'){
-    body=`<div class="card" style="padding:16px;margin-top:10px"><b>Loading ${foodEsc(FOOD_STATE_NAMES[code])} on-field restaurants…</b><div class="muted" style="font-size:12px;margin-top:5px">This uses the live Fly2Lunch on-airport search. Results will be cached after the first load.</div></div>`;
+    body=`<div class="muted" style="font-size:12px;margin:8px 0 2px">${rows.length} ${isOff?'off-field':'on-field'} restaurant${rows.length===1?'':'s'} across ${groups.length} airport${groups.length===1?'':'s'}${st==='loading'?' · search still adding results':''}</div>`+
+      groups.map(g=>`<div class="card" style="margin-top:10px;padding:12px"><div style="font-size:18px;font-weight:900;margin-bottom:4px">${foodEsc(g.airport)} · ${foodEsc(g.airportName)}</div>${g.rows.map(r=>foodRestaurantCard(r,foodMode)).join('')}</div>`).join('');
+  }else if(st==='loading'){
+    body=`<div class="card" style="padding:16px;margin-top:10px"><b>Loading ${foodEsc(FOOD_STATE_NAMES[code])} ${isOff?'off-field':'on-field'} restaurants…</b><div class="muted" style="font-size:12px;margin-top:5px">${isOff?`Searching OpenStreetMap around public-use airports within ${FOOD_OFF_RADIUS_MI} miles. This state will be cached for one year.`:'This uses the live Fly2Lunch on-airport search. Results will be cached after the first load.'}</div></div>`;
+  }else if(isOff && (st==='idle')){
+    const auto=FOOD_OFF_PRELOAD.includes(code);
+    body=`<div class="card" style="padding:16px;margin-top:10px"><b>${auto?'Preparing':'Load'} ${foodEsc(FOOD_STATE_NAMES[code])} off-field restaurants</b><div class="muted" style="font-size:12px;margin-top:5px">Only restaurants within ${FOOD_OFF_RADIUS_MI} miles of an open public-use airport are included. ${auto?'VA, NC and SC are set to preload automatically.':'This state stays unloaded until you request it.'}</div><button onclick="loadOffFoodState('${code}')" style="margin-top:10px">Load ${code} OFF FIELD</button></div>`;
   }else if(st==='error'){
-    body=`<div class="card" style="padding:16px;margin-top:10px"><b>Live source did not respond.</b><div class="muted" style="font-size:12px;margin-top:5px">Tap Retry. Any hand-checked offline entries are still shown.</div><button onclick="FOOD_LOAD_STATUS['${code}']='queued';loadFoodState('${code}')" style="margin-top:10px">Retry ${code}</button></div>`;
+    body=`<div class="card" style="padding:16px;margin-top:10px"><b>Live source did not respond.</b><div class="muted" style="font-size:12px;margin-top:5px">Tap Retry. Cached entries remain available.</div><button onclick="${isOff?`FOOD_OFF_STATUS['${code}']='idle';loadOffFoodState('${code}')`:`FOOD_LOAD_STATUS['${code}']='queued';loadFoodState('${code}')`}" style="margin-top:10px">Retry ${code}</button></div>`;
   }else{
-    body=`<div class="muted" style="padding:18px 4px">No on-field restaurant is currently returned for this state by the source.</div>`;
+    body=`<div class="muted" style="padding:18px 4px">No ${isOff?'off-field restaurant within '+FOOD_OFF_RADIUS_MI+' miles':'on-field restaurant'} is currently returned for this state by the source.</div>`;
   }
   $('foodListView').innerHTML=`<button class="secondary" onclick="renderFoodStates()" style="width:auto;padding:9px 14px;margin-bottom:10px">← States</button><div style="font-size:20px;font-weight:900;margin:2px 0 8px">${foodEsc(FOOD_STATE_NAMES[code])}</div>${modeControls}${body}`;
-  if(!fromRefresh && st!=='done' && !FOOD_LOAD_PROMISE[code]) loadFoodState(code);
+  if(!fromRefresh){
+    if(isOff && st!=='done' && !FOOD_OFF_PROMISE[code]) loadOffFoodState(code);
+    if(!isOff && st!=='done' && !FOOD_LOAD_PROMISE[code]) loadFoodState(code);
+  }
 }
 
 // V70 — Museums. Broad museum category; not limited to places labeled "aviation museum".
