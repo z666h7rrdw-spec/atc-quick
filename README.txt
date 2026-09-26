@@ -1,6 +1,6 @@
-ATC Quick V71
+ATC Quick V72
 
-Current base: V71
+Current base: V72
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -19,3 +19,8 @@ V71 North Carolina database build:
 - Removed no working features from V70.
 
 Restaurant and museum listings are convenience data. Verify current hours, access, transportation and operating status before flight.
+
+V72 NC food expansion:
+- Added more verified OFF FIELD NC entries (including HKY and 5W4).
+- Grouped restaurant results by airport so it is obvious when multiple airports are represented.
+- Added a summary count for restaurants and airports in the active filter.
