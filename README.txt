@@ -1,6 +1,6 @@
-ATC Quick V73
+ATC Quick V74
 
-Current base: V73
+Current base: V74
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -29,3 +29,9 @@ V73 food UI:
 - State counts now show ON-FIELD restaurant count only.
 - OFF FIELD is fixed at <=2 miles.
 - OFF FIELD lists airport identifiers first; tap an airport to see its nearby restaurants.
+
+V74 cache fix:
+- Food UI remains OFF FIELD <= 2 miles only with airport-first listing.
+- Updated service-worker registration from stale v71 to v74.
+- updateViaCache:none and no-store navigation fetch reduce stale Home Screen builds.
+- Manifest start URL updated to v74.
