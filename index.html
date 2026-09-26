@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V88</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V90</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -837,7 +837,7 @@ const FLY_IN_FOOD = [
 ];
 const FOOD_STATE_NAMES={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
 
-// V88 — nationwide ON-FIELD state counts + one-click whole-state OFF-FIELD download; airport-first results; 1-year device cache.
+// V90 — nationwide ON-FIELD state counts + resumable whole-state OFF-FIELD download; airport-first results; 1-year device cache.
 // Source: Fly2Lunch's live "on airport" search. We use the local FAA airport database to pick
 // enough search origins to cover each state's airports, then filter results back to that state.
 // Results are cached per state so subsequent openings are immediate. The older hand-checked
@@ -853,7 +853,7 @@ let foodDirectFetchAllowed=true;
 let foodJinaChain=Promise.resolve();
 let foodJinaNextAt=0;
 
-// V88 OFF FIELD — OpenStreetMap/Overpass restaurants within 5 statute miles.
+// V90 OFF FIELD — OpenStreetMap/Overpass restaurants within 5 statute miles. Successful batches save immediately and retries resume instead of restarting.
 // OFF FIELD never preloads. The user explicitly downloads one whole state, then browses results airport-by-airport.
 const FOOD_OFF_RADIUS_MI=5;
 const FOOD_OFF_RADIUS_M=Math.round(FOOD_OFF_RADIUS_MI*1609.344);
@@ -863,6 +863,7 @@ const FOOD_OFF_PRELOAD=[];
 const FOOD_OFF_BY_STATE={};
 const FOOD_OFF_STATE_STATUS={};
 const FOOD_OFF_STATE_PROGRESS={};
+const FOOD_OFF_DONE_CHUNKS={};
 const FOOD_OFF_PROMISE={};
 let foodMode='on';
 let foodOffAirportId=null;
@@ -1047,15 +1048,24 @@ function foodOffRowsForAirport(code,airport){
 function foodOffCacheRead(code){
   try{
     const x=JSON.parse(localStorage.getItem(FOOD_OFF_CACHE_PREFIX+code)||'null');
-    if(!x || !x.complete || !Array.isArray(x.rows) || !x.saved || Date.now()-x.saved>FOOD_OFF_CACHE_TTL) return false;
+    if(!x || !Array.isArray(x.rows) || !x.saved || Date.now()-x.saved>FOOD_OFF_CACHE_TTL) return false;
     FOOD_OFF_BY_STATE[code]=x.rows;
-    FOOD_OFF_STATE_STATUS[code]='done';
-    FOOD_OFF_STATE_PROGRESS[code]=null;
+    FOOD_OFF_DONE_CHUNKS[code]=Array.isArray(x.doneChunks)?x.doneChunks.map(Number).filter(Number.isFinite):[];
+    if(x.complete){
+      FOOD_OFF_STATE_STATUS[code]='done';
+      FOOD_OFF_STATE_PROGRESS[code]=null;
+    }else{
+      FOOD_OFF_STATE_STATUS[code]='idle';
+      FOOD_OFF_STATE_PROGRESS[code]=x.totalChunks?{done:FOOD_OFF_DONE_CHUNKS[code].length,total:Number(x.totalChunks)||0}:null;
+    }
     return true;
   }catch(e){return false;}
 }
-function foodOffCacheWrite(code,rows){
-  try{localStorage.setItem(FOOD_OFF_CACHE_PREFIX+code,JSON.stringify({saved:Date.now(),complete:true,rows}));}catch(e){}
+function foodOffCacheWrite(code,rows,complete=true,doneChunks=[],totalChunks=0){
+  try{
+    localStorage.setItem(FOOD_OFF_CACHE_PREFIX+code,JSON.stringify({saved:Date.now(),complete:!!complete,rows,doneChunks:[...new Set(doneChunks)].sort((a,b)=>a-b),totalChunks:Number(totalChunks)||0}));
+    return true;
+  }catch(e){return false;}
 }
 function foodNormName(x){return String(x||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ').trim();}
 function foodNearestAirport(lat,lon,airports){
@@ -1115,40 +1125,65 @@ async function loadOffFoodState(code){
     const airports=foodStateCandidates(code);
     if(!airports.length){
       FOOD_OFF_BY_STATE[code]=[];
+      FOOD_OFF_DONE_CHUNKS[code]=[];
       FOOD_OFF_STATE_STATUS[code]='done';
       FOOD_OFF_STATE_PROGRESS[code]=null;
-      foodOffCacheWrite(code,[]);
+      foodOffCacheWrite(code,[],true,[],0);
       refreshFoodUI(code);
       return [];
     }
-    const rows=[];
-    const chunkSize=22;
+
+    // Smaller batches are much less likely to time out on dense states. Every successful
+    // batch is saved immediately so a later Retry continues only the missing batches.
+    const chunkSize=12;
     const totalChunks=Math.ceil(airports.length/chunkSize);
-    let successful=0;
-    for(let i=0;i<airports.length;i+=chunkSize){
-      const chunk=airports.slice(i,i+chunkSize);
-      FOOD_OFF_STATE_PROGRESS[code]={done:Math.floor(i/chunkSize),total:totalChunks};
+    const doneSet=new Set((FOOD_OFF_DONE_CHUNKS[code]||[]).map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<totalChunks));
+    let rows=foodOffDedupe(FOOD_OFF_BY_STATE[code]||[]);
+    FOOD_OFF_STATE_PROGRESS[code]={done:doneSet.size,total:totalChunks};
+    refreshFoodUI(code);
+
+    for(let chunkIndex=0;chunkIndex<totalChunks;chunkIndex++){
+      if(doneSet.has(chunkIndex)) continue;
+      const chunk=airports.slice(chunkIndex*chunkSize,(chunkIndex+1)*chunkSize);
+      FOOD_OFF_STATE_PROGRESS[code]={done:doneSet.size,total:totalChunks};
       refreshFoodUI(code);
-      try{
-        const j=await foodFetchOverpass(foodOverpassQuery(chunk));
-        successful++;
-        rows.push(...foodParseOffElements(j,code,airports));
-      }catch(e){/* keep going so one temporary endpoint failure does not discard the whole attempt */}
-      FOOD_OFF_STATE_PROGRESS[code]={done:Math.floor(i/chunkSize)+1,total:totalChunks};
+      let parsed=null;
+      for(let attempt=0;attempt<2 && parsed===null;attempt++){
+        try{
+          const j=await foodFetchOverpass(foodOverpassQuery(chunk));
+          parsed=foodParseOffElements(j,code,airports);
+        }catch(e){
+          if(attempt===0) await foodSleep(900);
+        }
+      }
+      if(parsed!==null){
+        rows=foodOffDedupe([...rows,...parsed]);
+        FOOD_OFF_BY_STATE[code]=rows;
+        doneSet.add(chunkIndex);
+        FOOD_OFF_DONE_CHUNKS[code]=[...doneSet].sort((a,b)=>a-b);
+        // Save progress after every successful batch. If Safari closes or an endpoint fails,
+        // the next tap resumes from this exact point instead of throwing away thousands of rows.
+        foodOffCacheWrite(code,rows,false,FOOD_OFF_DONE_CHUNKS[code],totalChunks);
+      }
+      FOOD_OFF_STATE_PROGRESS[code]={done:doneSet.size,total:totalChunks};
       refreshFoodUI(code);
-      await foodSleep(250);
+      await foodSleep(300);
     }
-    const finalRows=foodOffDedupe(rows);
-    FOOD_OFF_BY_STATE[code]=finalRows;
+
+    FOOD_OFF_BY_STATE[code]=rows;
     FOOD_OFF_STATE_PROGRESS[code]=null;
-    if(successful===totalChunks){
+    if(doneSet.size===totalChunks){
       FOOD_OFF_STATE_STATUS[code]='done';
-      foodOffCacheWrite(code,finalRows);
+      FOOD_OFF_DONE_CHUNKS[code]=[...doneSet].sort((a,b)=>a-b);
+      foodOffCacheWrite(code,rows,true,FOOD_OFF_DONE_CHUNKS[code],totalChunks);
     }else{
       FOOD_OFF_STATE_STATUS[code]='error';
+      // Keep the partial state on-device; Retry/Resume will skip completed batches.
+      FOOD_OFF_DONE_CHUNKS[code]=[...doneSet].sort((a,b)=>a-b);
+      foodOffCacheWrite(code,rows,false,FOOD_OFF_DONE_CHUNKS[code],totalChunks);
     }
     refreshFoodUI(code);
-    return finalRows;
+    return rows;
   })();
   FOOD_OFF_PROMISE[code]=run.finally(()=>{delete FOOD_OFF_PROMISE[code];});
   return FOOD_OFF_PROMISE[code];
@@ -1268,9 +1303,10 @@ function showFoodOffAirport(code,airportId){
 function foodOffTopButton(code){
   const st=FOOD_OFF_STATE_STATUS[code]||'idle';
   const p=FOOD_OFF_STATE_PROGRESS[code];
+  const saved=(FOOD_OFF_DONE_CHUNKS[code]||[]).length;
   if(st==='done') return `<button disabled style="margin-top:8px;background:#16324a;opacity:.9">✓ ${code} OFF FIELD saved for 1 year</button>`;
-  if(st==='loading') return `<button disabled style="margin-top:8px;opacity:.7">Downloading ${code} OFF FIELD${p?` · ${p.done}/${p.total}`:''}…</button>`;
-  if(st==='error') return `<button onclick="FOOD_OFF_STATE_STATUS['${code}']='idle';startFoodOffState('${code}')" style="margin-top:8px">Retry whole ${code} OFF FIELD download</button>`;
+  if(st==='loading') return `<button disabled style="margin-top:8px;opacity:.7">Downloading ${code} OFF FIELD${p?` · ${p.done}/${p.total} batches saved`:''}…</button>`;
+  if(st==='error' || saved) return `<button onclick="FOOD_OFF_STATE_STATUS['${code}']='idle';startFoodOffState('${code}')" style="margin-top:8px">Resume ${code} OFF FIELD download${p&&p.total?` · ${saved}/${p.total} saved`:''}</button>`;
   return `<button onclick="startFoodOffState('${code}')" style="margin-top:8px">Download whole ${code} OFF FIELD</button>`;
 }
 function showFoodState(code,fromRefresh=false,mode=foodMode){
@@ -1309,7 +1345,9 @@ function showFoodState(code,fromRefresh=false,mode=foodMode){
       body=`<div class="card" style="padding:16px;margin-top:10px"><b>Downloading ${foodEsc(FOOD_STATE_NAMES[code])} OFF FIELD…</b><div class="muted" style="font-size:12px;margin-top:5px">${p?`Search batch ${Math.min(p.done+1,p.total)} of ${p.total}. `:''}When complete, you will get an airport list and can tap any airport to see its restaurants.</div></div>`;
     }else if(st==='error'){
       const partial=foodOffRowsForState(code).length;
-      body=`<div class="card" style="padding:16px;margin-top:10px"><b>The whole-state download did not finish.</b><div class="muted" style="font-size:12px;margin-top:5px">${partial?`${partial} partial result${partial===1?'':'s'} were found but not saved as a completed state. `:''}Use Retry at the top.</div></div>`;
+      const saved=(FOOD_OFF_DONE_CHUNKS[code]||[]).length;
+      const totalBatches=p?.total||0;
+      body=`<div class="card" style="padding:16px;margin-top:10px"><b>Download paused — your progress is saved.</b><div class="muted" style="font-size:12px;margin-top:5px">${partial?`${partial} restaurant result${partial===1?'':'s'} are saved on this device. `:''}${saved&&totalBatches?`${saved} of ${totalBatches} search batches are complete. `:''}Tap Resume at the top; it will continue with only the missing batches instead of starting over.</div></div>`;
     }else if(foodOffAirportId){
       const airport=foodStateAirportCards(code).find(a=>a.id===foodOffAirportId)||{id:foodOffAirportId,name:foodOffAirportId};
       const rows=foodOffRowsForAirport(code,foodOffAirportId).slice().sort((a,b)=>(Number(a.distance)||99)-(Number(b.distance)||99)||(a.restaurant||'').localeCompare(b.restaurant||''));
