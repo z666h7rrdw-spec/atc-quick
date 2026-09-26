@@ -1,6 +1,6 @@
-ATC Quick V78
+ATC Quick V79
 
-Current base: V78
+Current base: V79
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -49,3 +49,10 @@ V78 museum rebuild:
 - OFF FIELD is grouped by airport identifier first, then museum list.
 - If the nationwide source is unavailable, the app falls back to the smaller curated offline list.
 - Core ATC, restaurant, airport, private-strip, runway and GPS features are unchanged.
+
+
+V79 museum UI rollback/fix:
+- Restored the V77-style museum state behavior.
+- State tiles show the available museum count immediately; no per-state nationwide loading step.
+- Tapping a state immediately shows the museum list with ON FIELD / OFF FIELD filters.
+- Preserved all other V78 ATC, airport, food, private-strip, runway and GPS features.
