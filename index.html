@@ -111,7 +111,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="card" style="max-width:620px;margin:24px auto">
     <div class="tag">FLY-IN FOOD</div>
     <div style="font-size:22px;font-weight:900;margin-top:4px">Airport Restaurants</div>
-    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants. All states load automatically from the live Fly2Lunch on-airport search and cache on this device. OFF FIELD will be added next.</div>
+    <div class="muted" style="margin:6px 0 14px">Nationwide ON FIELD restaurants. All states load automatically from the live Fly2Lunch on-airport search and cache on this device for up to one year. OFF FIELD will be added next.</div>
     <div id="foodStateView"></div>
     <div id="foodListView" class="hidden"></div>
     <button class="secondary" style="margin-top:14px" onclick="closeFlyInFood()">Close</button>
@@ -838,13 +838,13 @@ const FLY_IN_FOOD = [
 ];
 const FOOD_STATE_NAMES={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
 
-// V82 — nationwide ON-FIELD restaurant loader.
+// V84 — nationwide ON-FIELD restaurant loader; 1-year device cache.
 // Source: Fly2Lunch's live "on airport" search. We use the local FAA airport database to pick
 // enough search origins to cover each state's airports, then filter results back to that state.
 // Results are cached per state so subsequent openings are immediate. The older hand-checked
 // entries remain as an offline fallback and are merged with the live list.
 const FOOD_CACHE_PREFIX='atcquick_food_onfield_v82_';
-const FOOD_CACHE_TTL=7*24*60*60*1000;
+const FOOD_CACHE_TTL=365*24*60*60*1000;
 const FOOD_LIVE_BY_STATE={};
 const FOOD_LOAD_STATUS={};
 const FOOD_LOAD_PROMISE={};
