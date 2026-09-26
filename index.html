@@ -37,7 +37,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
 #runwayWindPanel .rw-empty{color:#60748d;padding:16px 0}
 </style><link rel="apple-touch-icon" href="icon-192.png?v=11">
 </head><body><main>
-<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V68</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
+<div class="top"><div><div class="tag">FLIGHT-TEST BUILD · V69</div><h1>ATC Quick</h1></div><div class="tag">FAA NASR 03 SEP 2026</div></div>
 <div class="card">
 <div class="row">
 <div><label>ORIGIN</label><input id="origin" value="" autocomplete="off" autocapitalize="characters" oninput="showAirportResults('origin')"></div><div id="originResults" class="searchResults full"></div>
@@ -53,6 +53,8 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   <div class="muted" style="font-size:12px;margin-top:7px">Use current GPS location · no route required</div>
   <button class="secondary" onclick="openFlyInFood()" style="width:auto;min-width:210px;padding:10px 18px;font-size:15px;font-weight:800;background:#14283d;border:1px solid #29445f;margin-top:12px">FLY-IN FOOD</button>
   <div class="muted" style="font-size:12px;margin-top:7px">Browse airport restaurants by state</div>
+  <button class="secondary" onclick="openFlyInMuseums()" style="width:auto;min-width:210px;padding:10px 18px;font-size:15px;font-weight:800;background:#14283d;border:1px solid #29445f;margin-top:12px">AVIATION MUSEUMS</button>
+  <div class="muted" style="font-size:12px;margin-top:7px">Browse aviation museums by state</div>
 </div>
 
 <div id="flight" class="hidden">
@@ -116,6 +118,17 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
   </div>
 </div>
 
+<div id="flyInMuseumPanel" class="hidden" style="position:fixed;inset:0;background:#07111ef7;z-index:69;padding:18px;overflow:auto">
+  <div class="card" style="max-width:620px;margin:24px auto">
+    <div class="tag">AVIATION MUSEUMS</div>
+    <div style="font-size:22px;font-weight:900;margin-top:4px">Fly-In Museums</div>
+    <div class="muted" style="margin:6px 0 14px">Choose a state, then switch between museums on the airport and museums within 5 miles.</div>
+    <div id="museumStateView"></div>
+    <div id="museumListView" class="hidden"></div>
+    <button class="secondary" style="margin-top:14px" onclick="closeFlyInMuseums()">Close</button>
+  </div>
+</div>
+
 <div id="runwayWindPanel" class="hidden" style="position:fixed;inset:0;z-index:70;overflow:auto">
   <div class="rw-light">
     <div class="rw-title">Runway Wind</div>
@@ -129,7 +142,7 @@ button{background:#1976d2;border:0;font-weight:800}.secondary{background:#183049
     <button class="rw-close" onclick="closeRunwayWind()">Close</button>
   </div>
 </div>
-</main><script src="data.js?v=68"></script><!-- ATC Quick V68 -->
+</main><script src="data.js?v=69"></script><!-- ATC Quick V69 -->
 <script>
 let seq=[],idx=0,route=[],watch=null,logs=[];
 
@@ -744,7 +757,7 @@ function startGPS(){
  watch=navigator.geolocation.watchPosition(p=>{let q=[p.coords.latitude,p.coords.longitude],best=idx,bd=1e9;seq.forEach((s,i)=>{let d=dist(q,s.at);if(d<bd){bd=d;best=i}}); if(best>idx)idx=best;$("gps").textContent=`GPS active · accuracy ±${Math.round(p.coords.accuracy*3.28084)} ft`;render()},e=>$("gps").textContent="GPS: "+e.message,{enableHighAccuracy:true,maximumAge:5000,timeout:15000})
 }
 function copyLog(){let t=`ATC Quick flight test\\nRoute: ${$("origin").value} ${$("wps").value} ${$("dest").value} @ ${$("alt").value} ft\\n`+logs.join("\\n");navigator.clipboard?.writeText(t);alert("Flight log copied.")}
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=68')}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js?v=69')}
 // V68 — Fly-In Food on/off-field filtering test. Kept separate from route planning to avoid cockpit clutter.
 const FLY_IN_FOOD = [
   {state:"NC",airport:"RDU",airportName:"Raleigh-Durham Intl",restaurant:"Crosswinds Cafe",kind:"ON FIELD",source:"Fly2Lunch"},
@@ -816,4 +829,54 @@ function showFoodState(code){
   const list=rows.length?rows.map(r=>`<div class="step"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><b style="font-size:18px">${r.airport}</b> · ${r.airportName}<div style="font-size:18px;font-weight:850;margin-top:4px">${r.restaurant}</div>${r.kind==="OFF FIELD"?`<div class="muted" style="font-size:13px;margin-top:3px">${Number(r.distance).toFixed(1)} mi from airport</div>`:''}</div><span class="pill" style="white-space:nowrap">${r.kind}</span></div><div class="muted" style="font-size:11px;margin-top:6px">Listing source: ${r.source} · Call ahead to verify hours/access.</div></div>`).join(''):`<div class="muted" style="padding:18px 4px">No ${foodMode.toLowerCase()} restaurants loaded for this filter yet.</div>`;
   $("foodListView").innerHTML=`<button class="secondary" onclick="renderFoodStates()" style="width:auto;padding:9px 14px;margin-bottom:10px">← States</button><div style="font-size:20px;font-weight:900;margin:2px 0 8px">${FOOD_STATE_NAMES[code]}</div>${modeControls}${distanceControls}${list}`;
 }
+
+
+// V69 — Aviation Museums. Separate state browser with ON FIELD / OFF FIELD (<=5 mi) toggle.
+// Test data at MWK is intentionally synthetic so the filter can be verified before loading the nationwide museum list.
+const FLY_IN_MUSEUMS = [
+  {state:"NC",airport:"MWK",airportName:"Mount Airy/Surry County",museum:"Test Museum",kind:"OFF FIELD",distance:5.0,source:"TEST DATA"}
+];
+const MUSEUM_STATE_NAMES=FOOD_STATE_NAMES;
+let museumMode="ON FIELD";
+let museumStateCode=null;
+function openFlyInMuseums(){
+  $("flyInMuseumPanel").classList.remove("hidden");
+  renderMuseumStates();
+}
+function closeFlyInMuseums(){ $("flyInMuseumPanel").classList.add("hidden"); }
+function renderMuseumStates(){
+  const loaded=new Set(FLY_IN_MUSEUMS.map(x=>x.state));
+  const codes=Object.keys(MUSEUM_STATE_NAMES);
+  museumStateCode=null;
+  $("museumListView").classList.add("hidden");
+  $("museumStateView").classList.remove("hidden");
+  $("museumStateView").innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">${codes.map(code=>{const n=FLY_IN_MUSEUMS.filter(x=>x.state===code).length;return `<button class="secondary" ${loaded.has(code)?`onclick="showMuseumState('${code}')"`:''} style="padding:11px 9px;${loaded.has(code)?'':'opacity:.38'}"><b>${code}</b><div style="font-size:11px;font-weight:600;margin-top:3px">${MUSEUM_STATE_NAMES[code]}${n?` · ${n}`:' · coming soon'}</div></button>`}).join('')}</div>`;
+}
+function setMuseumMode(mode){
+  museumMode=mode;
+  if(museumStateCode) showMuseumState(museumStateCode);
+}
+function museumRowsForState(code){
+  return FLY_IN_MUSEUMS.filter(x=>{
+    if(x.state!==code) return false;
+    if(museumMode==="ON FIELD") return x.kind==="ON FIELD";
+    return x.kind==="OFF FIELD" && Number(x.distance||0)<=5;
+  }).sort((a,b)=>a.airport.localeCompare(b.airport)||Number(a.distance||0)-Number(b.distance||0)||a.museum.localeCompare(b.museum));
+}
+function showMuseumState(code){
+  museumStateCode=code;
+  const rows=museumRowsForState(code);
+  $("museumStateView").classList.add("hidden");
+  $("museumListView").classList.remove("hidden");
+  const onActive=museumMode==="ON FIELD";
+  const offActive=!onActive;
+  const modeControls=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px">
+    <button onclick="setMuseumMode('ON FIELD')" style="padding:11px;background:${onActive?'#1976d2':'#14283d'};border:${onActive?'0':'1px solid #29445f'}">ON FIELD</button>
+    <button onclick="setMuseumMode('OFF FIELD')" style="padding:11px;background:${offActive?'#1976d2':'#14283d'};border:${offActive?'0':'1px solid #29445f'}">OFF FIELD</button>
+  </div>`;
+  const distanceNote=offActive?`<div class="muted" style="font-size:11px;font-weight:800;margin:4px 0 10px">SHOWING MUSEUMS WITHIN 5 MILES OF THE AIRPORT</div>`:'';
+  const list=rows.length?rows.map(r=>`<div class="step"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><b style="font-size:18px">${r.airport}</b> · ${r.airportName}<div style="font-size:18px;font-weight:850;margin-top:4px">${r.museum}</div>${r.kind==="OFF FIELD"?`<div class="muted" style="font-size:13px;margin-top:3px">${Number(r.distance).toFixed(1)} mi from airport</div>`:''}</div><span class="pill" style="white-space:nowrap">${r.kind}</span></div><div class="muted" style="font-size:11px;margin-top:6px">Listing source: ${r.source} · Verify hours, ground access and transportation before flight.</div></div>`).join(''):`<div class="muted" style="padding:18px 4px">No ${museumMode.toLowerCase()} museums loaded for this filter yet.</div>`;
+  $("museumListView").innerHTML=`<button class="secondary" onclick="renderMuseumStates()" style="width:auto;padding:9px 14px;margin-bottom:10px">← States</button><div style="font-size:20px;font-weight:900;margin:2px 0 8px">${MUSEUM_STATE_NAMES[code]}</div>${modeControls}${distanceNote}${list}`;
+}
+
 </script></body></html>
