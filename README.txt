@@ -91,3 +91,11 @@ V86 restaurant UI / loading change:
 - OFF-FIELD restaurants never preload in the background, including VA/NC/SC.
 - Open a state, then tap OFF FIELD and Load to fetch that state's nearby restaurants.
 - Existing one-year OFF-FIELD cache is preserved.
+
+V88 off-field food flow:
+- One whole-state OFF FIELD download button appears at the top of each state page.
+- OFF FIELD does not preload.
+- After a state download completes, the OFF FIELD view shows the state's public-use airport list.
+- Tap an airport to see restaurants within 5 miles.
+- Whole-state OFF FIELD results cache for one year.
+- State and airport detail views open at the top of the panel.
