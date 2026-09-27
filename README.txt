@@ -99,3 +99,9 @@ V88 off-field food flow:
 - Tap an airport to see restaurants within 5 miles.
 - Whole-state OFF FIELD results cache for one year.
 - State and airport detail views open at the top of the panel.
+
+V91 restaurant simplification:
+- Removed OFF-FIELD restaurant lookup/download from the restaurant UI.
+- Restaurant pages are ON-FIELD airport restaurants only.
+- Old OFF-FIELD restaurant caches from earlier builds are cleared when the restaurant browser opens.
+- Museums remain unchanged, including their ON/OFF-FIELD museum filters.
