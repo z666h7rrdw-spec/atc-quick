@@ -1,6 +1,6 @@
-ATC Quick V79
+ATC Quick V92
 
-Current base: V79
+Current base: V92
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -105,3 +105,11 @@ V91 restaurant simplification:
 - Restaurant pages are ON-FIELD airport restaurants only.
 - Old OFF-FIELD restaurant caches from earlier builds are cleared when the restaurant browser opens.
 - Museums remain unchanged, including their ON/OFF-FIELD museum filters.
+
+
+V92 Quick Airport Info:
+- Replaced the WHO CAN I CALL? home-screen feature with QUICK AIRPORT INFO.
+- Quick Airport Info searches the onboard nationwide airport database by identifier, airport name, or city.
+- Displays airport elevation, runways, traffic-pattern notes, frequencies, status/private-use warnings, and available private-airport contacts.
+- Does not alter the planned ATC route.
+- All V91 route, frequency lookup, Fly-In Food, museum, runway-wind, and flight-test features are otherwise preserved.
