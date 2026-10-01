@@ -1,6 +1,6 @@
-ATC Quick V92
+ATC Quick V93
 
-Current base: V92
+Current base: V93
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -107,7 +107,7 @@ V91 restaurant simplification:
 - Museums remain unchanged, including their ON/OFF-FIELD museum filters.
 
 
-V92 Quick Airport Info:
+V93 Quick Airport Info:
 - Replaced the WHO CAN I CALL? home-screen feature with QUICK AIRPORT INFO.
 - Quick Airport Info searches the onboard nationwide airport database by identifier, airport name, or city.
 - Displays airport elevation, runways, traffic-pattern notes, frequencies, status/private-use warnings, and available private-airport contacts.
