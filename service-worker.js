@@ -1,8 +1,8 @@
-const CACHE = 'atc-quick-v93';
+const CACHE = 'atc-quick-v94';
 const CORE = [
   './',
   './index.html',
-  './data.js?v=93',
+  './data.js?v=94',
   './airports.json',
   './manifest.json',
   './icon-192.png',

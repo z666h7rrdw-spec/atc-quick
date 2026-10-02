@@ -1,6 +1,6 @@
-ATC Quick V93
+ATC Quick V94
 
-Current base: V93
+Current base: V94
 
 Preserved from V70/V69/V68/V66:
 - ATC route prediction and altitude-aware logic
@@ -113,3 +113,11 @@ V93 Quick Airport Info:
 - Displays airport elevation, runways, traffic-pattern notes, frequencies, status/private-use warnings, and available private-airport contacts.
 - Does not alter the planned ATC route.
 - All V91 route, frequency lookup, Fly-In Food, museum, runway-wind, and flight-test features are otherwise preserved.
+
+
+V94 Quick Airport Info / wind calculator update:
+- Removed the LOOK UP A FREQUENCY button and Quick Frequency Search overlay completely.
+- Quick Airport Info now includes a WIND CALCULATOR button after an airport is selected.
+- The wind calculator uses that selected airport's runway headings and shows the best runway, headwind/tailwind component, and left/right crosswind component.
+- Destination airport cards still retain access to the same runway wind calculator.
+- All other V93 route guidance, airport data, Fly-In Food, museum, GPS, and offline-first features are preserved.
